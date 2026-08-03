@@ -1,0 +1,85 @@
+.listing__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.85rem 1.25rem;
+  margin-bottom: 1.35rem;
+}
+
+.listing__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  flex: 1;
+  padding: 0.95rem 1.05rem;
+  background: var(--surface);
+  border: 1px solid rgba(12, 33, 56, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(12, 33, 56, 0.03);
+}
+
+.listing__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: min(100%, 200px);
+  flex: 1;
+}
+
+.listing__filters span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.listing__filters select {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.listing__filters select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.listing__count {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.listing__grid {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.listing__empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  padding: 2.5rem 1rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+@media (min-width: 720px) {
+  .listing__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .listing__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

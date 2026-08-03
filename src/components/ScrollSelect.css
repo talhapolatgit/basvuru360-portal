@@ -1,0 +1,105 @@
+.scroll-select {
+  position: relative;
+  width: 100%;
+}
+
+.scroll-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scroll-select__trigger:focus,
+.scroll-select.is-open .scroll-select__trigger {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.scroll-select.is-disabled .scroll-select__trigger {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f5f7fa;
+}
+
+.scroll-select__placeholder {
+  color: var(--muted);
+}
+
+.scroll-select__chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg) translateY(-2px);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.scroll-select.is-open .scroll-select__chevron {
+  transform: rotate(225deg) translateY(-1px);
+}
+
+.scroll-select__list {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: #fff;
+  border: 1px solid rgba(12, 33, 56, 0.1);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 16px rgba(12, 33, 56, 0.08),
+    0 20px 40px rgba(12, 33, 56, 0.08);
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.scroll-select__option {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scroll-select__option:hover,
+.scroll-select__option.is-selected {
+  background: rgba(11, 107, 98, 0.08);
+}
+
+.scroll-select__native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}

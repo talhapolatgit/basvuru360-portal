@@ -1,0 +1,128 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: inherit;
+  min-width: 0;
+}
+
+.brand__mark {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  overflow: hidden;
+}
+
+.brand__mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand__mark--logo {
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.2rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  height: fit-content;
+  max-width: 100%;
+}
+
+.brand__mark--logo .brand__logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.brand__logo {
+  display: block;
+  object-fit: contain;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.brand__birim {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.brand--sm .brand__mark:not(.brand__mark--logo) {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+.brand--sm .brand__name {
+  font-size: 0.92rem;
+}
+
+.brand--md .brand__mark:not(.brand__mark--logo) {
+  width: 2.15rem;
+  height: 2.15rem;
+}
+
+.brand--md .brand__name {
+  font-size: 0.98rem;
+}
+
+.brand--lg .brand__mark:not(.brand__mark--logo) {
+  width: 2.85rem;
+  height: 2.85rem;
+}
+
+.brand--lg .brand__name {
+  font-size: 1.25rem;
+}
+
+.brand--hero {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.1rem;
+  max-width: 22rem;
+}
+
+.brand--hero .brand__mark:not(.brand__mark--logo) {
+  width: 3.75rem;
+  height: 3.75rem;
+}
+
+.brand--hero .brand__mark {
+  color: #f4f7f6;
+  padding: 0.35rem;
+  border: 1px solid rgba(247, 250, 249, 0.28);
+}
+
+.brand--hero .brand__name {
+  font-size: clamp(1.85rem, 4.5vw, 2.85rem);
+  color: #f7faf9;
+  max-width: 14ch;
+  font-weight: 600;
+}
+
+.brand--hero .brand__birim {
+  color: rgba(247, 250, 249, 0.7);
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
