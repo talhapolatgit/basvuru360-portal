@@ -110,9 +110,9 @@ export function Home() {
   const { isAuthenticated } = useAuth();
   const { sayfalar } = usePortalPages();
 
-  const menus = sayfalar.map((sayfa, index) =>
-    mapSayfaToMenu(sayfa, index, isAuthenticated),
-  );
+  const menus = sayfalar
+    .filter((sayfa) => !(sayfa.sadece_giris && !isAuthenticated))
+    .map((sayfa, index) => mapSayfaToMenu(sayfa, index, isAuthenticated));
 
   return (
     <div className="page page-enter home">

@@ -254,6 +254,7 @@ export type PortalSayfa = {
   slug: string;
   path: string;
   sistem: boolean;
+  sadece_giris: boolean;
   has_kurs: boolean;
   has_etkinlik: boolean;
 };

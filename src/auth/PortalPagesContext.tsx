@@ -19,10 +19,17 @@ type PortalPagesContextValue = {
 
 const PortalPagesContext = createContext<PortalPagesContextValue | null>(null);
 
+function normalizeSayfalar(items: PortalSayfa[]): PortalSayfa[] {
+  return items.map((item) => ({
+    ...item,
+    sadece_giris: Boolean(item.sadece_giris),
+  }));
+}
+
 function readCachedSayfalar(): PortalSayfa[] | null {
   const cached = readJsonCookie<PortalSayfa[]>(SAYFALAR_COOKIE);
   if (!Array.isArray(cached)) return null;
-  return cached;
+  return normalizeSayfalar(cached);
 }
 
 function sameSayfalar(a: PortalSayfa[], b: PortalSayfa[]): boolean {
@@ -39,7 +46,7 @@ export function PortalPagesProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const items = await fetchPortalSayfalar();
+        const items = normalizeSayfalar(await fetchPortalSayfalar());
         if (cancelled) return;
         setSayfalar((prev) => {
           if (sameSayfalar(prev, items)) return prev;

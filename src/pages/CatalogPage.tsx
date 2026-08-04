@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import {
   CourseCard,
@@ -13,6 +13,7 @@ import {
   fetchPortalSayfaKurslar,
 } from "../api/catalog";
 import { ApiError } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import { gunUzun, mapEtkinlik, mapKurs } from "../lib/format";
 import type {
   Etkinlik,
@@ -64,7 +65,9 @@ function Pager({
 
 export function CatalogPage({ slug: slugProp }: { slug?: string }) {
   const params = useParams();
+  const location = useLocation();
   const slug = slugProp || params.slug || "";
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const [sayfa, setSayfa] = useState<PortalSayfa | null>(null);
   const [metaLoading, setMetaLoading] = useState(true);
@@ -143,6 +146,7 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
 
   useEffect(() => {
     if (!mode || !slug) return;
+    if (sayfa?.sadece_giris && !isAuthenticated) return;
     let cancelled = false;
     void fetchPortalSayfaFiltreler(slug, {
       alan_id: mode === "kurs" && alan ? alan : undefined,
@@ -184,10 +188,11 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [mode, slug, alan]);
+  }, [mode, slug, alan, sayfa?.sadece_giris, isAuthenticated]);
 
   useEffect(() => {
     if (!sayfa?.has_kurs || !slug) return;
+    if (sayfa.sadece_giris && !isAuthenticated) return;
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setKursLoading(true);
@@ -231,6 +236,8 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
     };
   }, [
     sayfa?.has_kurs,
+    sayfa?.sadece_giris,
+    isAuthenticated,
     slug,
     mode,
     arama,
@@ -244,6 +251,7 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
 
   useEffect(() => {
     if (!sayfa?.has_etkinlik || !slug) return;
+    if (sayfa.sadece_giris && !isAuthenticated) return;
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setEtkinlikLoading(true);
@@ -281,6 +289,8 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
     };
   }, [
     sayfa?.has_etkinlik,
+    sayfa?.sadece_giris,
+    isAuthenticated,
     slug,
     mode,
     arama,
@@ -386,6 +396,22 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
         </p>
       </div>
     );
+  }
+
+  if (sayfa.sadece_giris) {
+    if (authLoading) {
+      return (
+        <div className="page listing page-enter">
+          <ListingGridSkeleton count={6} label="Sayfa yükleniyor" />
+        </div>
+      );
+    }
+    if (!isAuthenticated) {
+      const next = `${location.pathname}${location.search}`;
+      return (
+        <Navigate to={`/giris?next=${encodeURIComponent(next)}`} replace />
+      );
+    }
   }
 
   const pageDescription = sayfa.aciklama?.trim() || undefined;

@@ -163,6 +163,9 @@ export function Shell() {
       },
       ...sayfalar
         .filter((s) => {
+          if (s.sadece_giris && !isAuthenticated) {
+            return false;
+          }
           if (s.kod === "basvurularim" || s.kod === "profil") {
             return isAuthenticated;
           }
