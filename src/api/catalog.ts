@@ -22,7 +22,7 @@ export async function fetchPortalSayfaKurslar(
 ) {
   return apiRequest<{ items: KursApi[]; meta: PageMeta }>(
     `/portal-sayfalar/${encodeURIComponent(slug)}/kurslar`,
-    { query },
+    { query, auth: true },
   );
 }
 
@@ -32,7 +32,7 @@ export async function fetchPortalSayfaEtkinlikler(
 ) {
   return apiRequest<{ items: EtkinlikApi[]; meta: PageMeta }>(
     `/portal-sayfalar/${encodeURIComponent(slug)}/etkinlikler`,
-    { query },
+    { query, auth: true },
   );
 }
 
@@ -51,7 +51,7 @@ export async function fetchPortalSayfaFiltreler(
 ) {
   return apiRequest<PortalSayfaFiltreler>(
     `/portal-sayfalar/${encodeURIComponent(slug)}/filtreler`,
-    { query },
+    { query, auth: true },
   );
 }
 
