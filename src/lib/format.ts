@@ -1,4 +1,4 @@
-import type { BasvuruDurumuKod, DersSaati, Etkinlik, EtkinlikApi, GunKodu, Kurs, KursApi } from "./types";
+import type { BasvuruDurumuKod, DersSaati, Etkinlik, EtkinlikApi, GunKodu, Kurs, KursApi } from "../types";
 
 const GUN_UZUN: Record<GunKodu, string> = {
   1: "Pazartesi",
