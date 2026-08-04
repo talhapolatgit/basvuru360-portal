@@ -14,6 +14,7 @@ import {
 } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import { gunUzun, mapEtkinlik, mapKurs } from "../lib/format";
 import type {
   Etkinlik,
@@ -68,9 +69,14 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
   const location = useLocation();
   const slug = slugProp || params.slug || "";
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { sayfalar } = usePortalPages();
+  const sayfalarRef = useRef(sayfalar);
+  sayfalarRef.current = sayfalar;
 
-  const [sayfa, setSayfa] = useState<PortalSayfa | null>(null);
-  const [metaLoading, setMetaLoading] = useState(true);
+  const cachedSayfa = sayfalar.find((s) => s.slug === slug) ?? null;
+
+  const [sayfa, setSayfa] = useState<PortalSayfa | null>(cachedSayfa);
+  const [metaLoading, setMetaLoading] = useState(!cachedSayfa);
   const [metaError, setMetaError] = useState<string | null>(null);
 
   const [arama, setArama] = useState("");
@@ -105,9 +111,12 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setMetaLoading(true);
+    const fromCache =
+      sayfalarRef.current.find((s) => s.slug === slug) ?? null;
+
+    setSayfa(fromCache);
+    setMetaLoading(!fromCache);
     setMetaError(null);
-    setSayfa(null);
     setArama("");
     setMerkez("");
     setAlan("");
@@ -117,20 +126,27 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
     setGunler([]);
     setKursPage(1);
     setEtkinlikPage(1);
+
     void fetchPortalSayfa(slug)
       .then((data) => {
-        if (!cancelled) setSayfa(data);
+        if (!cancelled) {
+          setSayfa(data);
+          setMetaError(null);
+        }
       })
       .catch((err) => {
-        if (!cancelled) {
+        if (cancelled) return;
+        if (!fromCache) {
           setMetaError(
             err instanceof ApiError ? err.message : "Sayfa yüklenemedi.",
           );
+          setSayfa(null);
         }
       })
       .finally(() => {
         if (!cancelled) setMetaLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
@@ -399,7 +415,8 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
   }
 
   if (sayfa.sadece_giris) {
-    if (authLoading) {
+    // Cookie'de kişi varken kabuğu hemen göster; token doğrulanırken skeleton yok.
+    if (authLoading && !isAuthenticated) {
       return (
         <div className="page listing page-enter">
           <ListingGridSkeleton count={6} label="Sayfa yükleniyor" />
