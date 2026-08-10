@@ -5,6 +5,7 @@ import { useAuth } from "../auth/AuthContext";
 import { fetchEtkinlik } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { basvuruLabel, formatDate, kosullarMetni, mapEtkinlik } from "../lib/format";
+import { hasRichText, sanitizeRichHtml } from "../lib/richHtml";
 import type { Etkinlik } from "../types";
 import "../components/ListingCards.css";
 import "./Detail.css";
@@ -89,7 +90,6 @@ export function EventDetail() {
       <PageHeader
         eyebrow={`#${etkinlik.etkinlik_no} · ${etkinlik.tip}`}
         title={etkinlik.ad}
-        description={etkinlik.aciklama}
         actions={
           <span className={`pill pill--${etkinlik.basvuru_durumu}`}>
             {basvuruLabel(etkinlik.basvuru_durumu)}
@@ -141,6 +141,18 @@ export function EventDetail() {
               </li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {hasRichText(etkinlik.aciklama) ? (
+        <section className="detail__section detail__aciklama">
+          <h2>Açıklama</h2>
+          <div
+            className="detail__prose"
+            dangerouslySetInnerHTML={{
+              __html: sanitizeRichHtml(etkinlik.aciklama),
+            }}
+          />
         </section>
       ) : null}
 

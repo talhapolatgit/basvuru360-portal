@@ -36,6 +36,7 @@ const fallback: GenelAyarlar = {
     kod: "tc_sifre",
     label: "T.C. Kimlik No + Şifre",
   },
+  kimlik_sorgulama_aktif: false,
 };
 
 type SettingsContextValue = {

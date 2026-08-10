@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { DetailLayout } from "../components/DetailBackLink";
 import { PageHeader } from "../components/PageHeader";
+import { ShareButton } from "../components/ShareButton";
 import { WeeklySchedule } from "../components/ListingCards";
 import { useAuth } from "../auth/AuthContext";
 import { fetchKurs } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { basvuruLabel, formatDate, kosullarMetni, mapKurs } from "../lib/format";
+import { hasRichText, sanitizeRichHtml } from "../lib/richHtml";
 import type { Kurs } from "../types";
 import "./Detail.css";
 
@@ -153,7 +155,25 @@ export function CourseDetail() {
           </section>
         ) : null}
 
+        {hasRichText(kurs.aciklama) ? (
+          <section className="detail__section detail__aciklama">
+            <h2>Açıklama</h2>
+            <div
+              className="detail__prose"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeRichHtml(kurs.aciklama),
+              }}
+            />
+          </section>
+        ) : null}
+
         <div className="detail__actions">
+          <ShareButton
+            title={kurs.brans}
+            text={[kurs.brans, kurs.merkez, kurs.ozet]
+              .filter(Boolean)
+              .join(" · ")}
+          />
           {canApply ? (
             <Link to={applyTo} className="btn btn--primary">
               Başvur

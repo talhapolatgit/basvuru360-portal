@@ -5,6 +5,7 @@ import { DetailLayout } from "../components/DetailBackLink";
 import { ScrollSelect } from "../components/ScrollSelect";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
+import { useSettings } from "../auth/SettingsContext";
 import { createEtkinlikBasvuru, createKursBasvuru } from "../api/basvurular";
 import {
   fetchEtkinlik,
@@ -13,7 +14,12 @@ import {
   fetchKurs,
 } from "../api/catalog";
 import { ApiError } from "../api/client";
-import { mapEtkinlik, mapKurs } from "../lib/format";
+import {
+  dogumToIso,
+  formatDogumInput,
+  mapEtkinlik,
+  mapKurs,
+} from "../lib/format";
 import type { BasvuruOnay, Etkinlik, Kurs, LookupItem } from "../types";
 import "./Login.css";
 import "./Detail.css";
@@ -56,7 +62,9 @@ export function ApplyEvent() {
 function ApplyForm({ kind }: { kind: Kind }) {
   const { id } = useParams();
   const { kisi, setKisi, refreshKisi } = useAuth();
+  const { ayarlar } = useSettings();
   const navigate = useNavigate();
+  const kimlikAktif = Boolean(ayarlar.kimlik_sorgulama_aktif);
 
   const [kurs, setKurs] = useState<Kurs | null>(null);
   const [etkinlik, setEtkinlik] = useState<Etkinlik | null>(null);
@@ -80,7 +88,14 @@ function ApplyForm({ kind }: { kind: Kind }) {
     veli_soyad: "",
     veli_telefon: "",
     veli_email: "",
+    cocuk_ad: "",
+    cocuk_soyad: "",
+    cocuk_tc_kimlik_no: "",
+    cocuk_dogum_tarihi: "",
   });
+  const [basvuruIcin, setBasvuruIcin] = useState<"kendisi" | "cocuk">(
+    "kendisi",
+  );
   const [files, setFiles] = useState<Record<number, File | null>>({});
   const [onaylar, setOnaylar] = useState<Record<string, boolean>>({});
   const [aktifMetin, setAktifMetin] = useState<BasvuruOnay | null>(null);
@@ -102,7 +117,9 @@ function ApplyForm({ kind }: { kind: Kind }) {
     return age;
   }, [kisi?.dogum_tarihi]);
 
-  const needsVeli = yas !== null && yas < 18;
+  const needsVeli = basvuruIcin === "kendisi" && yas !== null && yas < 18;
+  const cocukBasvurusuIzinli = yas === null || yas >= 18;
+  const cocukAdina = basvuruIcin === "cocuk" && cocukBasvurusuIzinli;
   const evrakTipleri = item?.evrak_zorunlu ? item.evrak_tipleri : [];
   const basvuruOnaylari = item?.basvuru_onaylari ?? [];
 
@@ -124,7 +141,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
     missing.il ||
     missing.ilce ||
     missing.adres ||
-    missing.cinsiyet ||
+    (!cocukAdina && !kimlikAktif && missing.cinsiyet) ||
     needsVeli;
 
   const merkezIl = item?.il ?? "";
@@ -141,6 +158,16 @@ function ApplyForm({ kind }: { kind: Kind }) {
       normTr(secilenIl) === normTr(merkezIl) ? merkezIlce : null;
     return sortWithPriority(ilceler, oncelikli);
   }, [ilceler, merkezIl, merkezIlce, form.il, kisi?.il]);
+
+  useEffect(() => {
+    if (!cocukBasvurusuIzinli && basvuruIcin === "cocuk") {
+      setBasvuruIcin("kendisi");
+      setForm((f) => ({
+        ...f,
+        cinsiyet: kisi?.cinsiyet ?? f.cinsiyet,
+      }));
+    }
+  }, [cocukBasvurusuIzinli, basvuruIcin, kisi?.cinsiyet]);
 
   useEffect(() => {
     if (!missing.il && !missing.ilce) return;
@@ -224,7 +251,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!item || !kisi) return;
+    if (!item || !kisi || submitting || success) return;
     setSubmitting(true);
     setError(null);
     setErrorDetails([]);
@@ -247,7 +274,25 @@ function ApplyForm({ kind }: { kind: Kind }) {
       if (email) fd.append("email", email);
       if (cinsiyet) fd.append("cinsiyet", cinsiyet);
 
-      if (needsVeli || form.veli_tc_kimlik_no) {
+      fd.append("basvuru_icin", basvuruIcin);
+      if (cocukAdina) {
+        const cocukDogumIso = dogumToIso(form.cocuk_dogum_tarihi);
+        if (!cocukDogumIso) {
+          setFieldErrors({
+            cocuk_dogum_tarihi: [
+              "Doğum tarihini GG.AA.YYYY formatında girin.",
+            ],
+          });
+          setSubmitting(false);
+          return;
+        }
+        fd.append("cocuk_ad", form.cocuk_ad.trim());
+        fd.append("cocuk_soyad", form.cocuk_soyad.trim());
+        fd.append("cocuk_tc_kimlik_no", form.cocuk_tc_kimlik_no.trim());
+        fd.append("cocuk_dogum_tarihi", cocukDogumIso);
+      }
+
+      if (!cocukAdina && (needsVeli || form.veli_tc_kimlik_no)) {
         fd.append("veli_tc_kimlik_no", form.veli_tc_kimlik_no);
         fd.append("veli_dogum_tarihi", form.veli_dogum_tarihi);
         fd.append("veli_ad", form.veli_ad);
@@ -297,7 +342,6 @@ function ApplyForm({ kind }: { kind: Kind }) {
         setError("Başvuru gönderilemedi.");
         setErrorDetails([]);
       }
-    } finally {
       setSubmitting(false);
     }
   }
@@ -306,7 +350,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
     return (
       <DetailLayout backTo={backList} backLabel="Geri">
         <div
-          className="page page--narrow page-enter apply-skeleton"
+          className="detail apply-skeleton"
           aria-busy="true"
           aria-live="polite"
         >
@@ -388,7 +432,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
 
   return (
     <DetailLayout backTo={backTo} backLabel="Detaya dön">
-      <div className="page page--narrow page-enter">
+      <div className="detail">
         <PageHeader
           title="Başvuru yap"
           description={`${title} için başvuru formu`}
@@ -400,6 +444,168 @@ function ApplyForm({ kind }: { kind: Kind }) {
               Başvuran: <strong>{kisi?.tam_adi}</strong>
               {kisi?.tc_kimlik_no ? ` · ${kisi.tc_kimlik_no}` : ""}
             </p>
+
+            {cocukBasvurusuIzinli ? (
+              <fieldset className="apply-fieldset">
+                <legend>Başvuru kimin için?</legend>
+                <div
+                  className="apply-choice"
+                  role="radiogroup"
+                  aria-label="Başvuru kimin için?"
+                >
+                  <label
+                    className={`apply-choice__option${
+                      basvuruIcin === "kendisi" ? " is-selected" : ""
+                    }`}
+                  >
+                    <input
+                      className="apply-choice__input"
+                      type="radio"
+                      name="basvuru_icin"
+                      value="kendisi"
+                      checked={basvuruIcin === "kendisi"}
+                      onChange={() => {
+                        setBasvuruIcin("kendisi");
+                        setForm((f) => ({
+                          ...f,
+                          cinsiyet: kisi?.cinsiyet ?? f.cinsiyet,
+                        }));
+                      }}
+                    />
+                    <span className="apply-choice__title">Kendim için</span>
+                    <span className="apply-choice__desc">
+                      Başvuruyu kendi adıma yapıyorum
+                    </span>
+                  </label>
+                  <label
+                    className={`apply-choice__option${
+                      basvuruIcin === "cocuk" ? " is-selected" : ""
+                    }`}
+                  >
+                    <input
+                      className="apply-choice__input"
+                      type="radio"
+                      name="basvuru_icin"
+                      value="cocuk"
+                      checked={basvuruIcin === "cocuk"}
+                      onChange={() => {
+                        setBasvuruIcin("cocuk");
+                        setForm((f) => ({ ...f, cinsiyet: "" }));
+                      }}
+                    />
+                    <span className="apply-choice__title">Çocuğum için</span>
+                    <span className="apply-choice__desc">
+                      Velisi olduğum çocuk adına başvuruyorum
+                    </span>
+                  </label>
+                </div>
+                {fieldErrors.basvuru_icin?.[0] ? (
+                  <small className="field-error">
+                    {fieldErrors.basvuru_icin[0]}
+                  </small>
+                ) : null}
+              </fieldset>
+            ) : null}
+
+            {cocukAdina ? (
+              <fieldset className="apply-fieldset">
+                <legend>Çocuk bilgileri</legend>
+                <div className="field-row">
+                  <label className="field">
+                    <span>Ad *</span>
+                    <input
+                      value={form.cocuk_ad}
+                      onChange={(e) =>
+                        setForm({ ...form, cocuk_ad: e.target.value })
+                      }
+                      required
+                    />
+                    {fieldErrors.cocuk_ad?.[0] ? (
+                      <small className="field-error">{fieldErrors.cocuk_ad[0]}</small>
+                    ) : null}
+                  </label>
+                  <label className="field">
+                    <span>Soyad *</span>
+                    <input
+                      value={form.cocuk_soyad}
+                      onChange={(e) =>
+                        setForm({ ...form, cocuk_soyad: e.target.value })
+                      }
+                      required
+                    />
+                    {fieldErrors.cocuk_soyad?.[0] ? (
+                      <small className="field-error">{fieldErrors.cocuk_soyad[0]}</small>
+                    ) : null}
+                  </label>
+                </div>
+                <div className="field-row">
+                  <label className="field">
+                    <span>T.C. Kimlik No *</span>
+                    <input
+                      maxLength={11}
+                      inputMode="numeric"
+                      value={form.cocuk_tc_kimlik_no}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          cocuk_tc_kimlik_no: e.target.value.replace(/\D/g, ""),
+                        })
+                      }
+                      required
+                    />
+                    {fieldErrors.cocuk_tc_kimlik_no?.[0] ? (
+                      <small className="field-error">
+                        {fieldErrors.cocuk_tc_kimlik_no[0]}
+                      </small>
+                    ) : null}
+                  </label>
+                  <label className="field">
+                    <span>Doğum tarihi *</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={form.cocuk_dogum_tarihi}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          cocuk_dogum_tarihi: formatDogumInput(e.target.value),
+                        })
+                      }
+                      placeholder="GG.AA.YYYY"
+                      autoComplete="bday"
+                      maxLength={10}
+                      required
+                    />
+                    {fieldErrors.cocuk_dogum_tarihi?.[0] ? (
+                      <small className="field-error">
+                        {fieldErrors.cocuk_dogum_tarihi[0]}
+                      </small>
+                    ) : null}
+                  </label>
+                </div>
+                {item.cinsiyet_sarti && !kimlikAktif ? (
+                  <label className="field">
+                    <span>Cinsiyet *</span>
+                    <select
+                      value={form.cinsiyet}
+                      onChange={(e) =>
+                        setForm({ ...form, cinsiyet: e.target.value })
+                      }
+                      required
+                    >
+                      <option value="">Seçiniz</option>
+                      <option value="kadin">Kadın</option>
+                      <option value="erkek">Erkek</option>
+                    </select>
+                    {fieldErrors.cinsiyet?.[0] ? (
+                      <small className="field-error">
+                        {fieldErrors.cinsiyet[0]}
+                      </small>
+                    ) : null}
+                  </label>
+                ) : null}
+              </fieldset>
+            ) : null}
 
             {hasMissingProfile ? (
               <fieldset className="apply-fieldset">
@@ -505,7 +711,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
                   </label>
                 ) : null}
 
-                {missing.cinsiyet ? (
+                {!cocukAdina && !kimlikAktif && missing.cinsiyet ? (
                   <label className="field">
                     <span>
                       Cinsiyet{item.cinsiyet_sarti ? " *" : ""}
@@ -690,9 +896,13 @@ function ApplyForm({ kind }: { kind: Kind }) {
             <button
               type="submit"
               className="btn btn--primary btn--block"
-              disabled={submitting}
+              disabled={submitting || Boolean(success)}
             >
-              {submitting ? "Gönderiliyor…" : "Başvuruyu gönder"}
+              {success
+                ? "Yönlendiriliyor…"
+                : submitting
+                  ? "Gönderiliyor…"
+                  : "Başvuruyu gönder"}
             </button>
           </form>
         </div>

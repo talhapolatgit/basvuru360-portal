@@ -1,0 +1,13 @@
+.share-btn {
+  gap: 0.45rem;
+}
+
+.share-btn svg {
+  flex-shrink: 0;
+}
+
+.share-btn.is-feedback {
+  color: var(--accent-deep);
+  border-color: rgba(11, 107, 98, 0.28);
+  background: var(--accent-soft);
+}

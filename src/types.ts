@@ -46,6 +46,7 @@ export type GenelAyarlar = {
     kod: GirisYontemiKod;
     label: string;
   };
+  kimlik_sorgulama_aktif?: boolean;
 };
 
 export type Kisi = {
@@ -107,6 +108,7 @@ export type KursApi = {
   evrak_zorunlu: boolean;
   evrak_tipleri: EvrakTipi[];
   basvuru_onaylari?: BasvuruOnay[];
+  aciklama?: string | null;
   haftalik_program?: Array<{
     gun: number | null;
     gun_kod?: string | null;
@@ -174,6 +176,7 @@ export type Kurs = {
   ikamet_sarti: string | null;
   ikamet_sarti_label: string | null;
   ozet: string;
+  aciklama: string | null;
   haftalik_program: DersSaati[];
 };
 
@@ -206,6 +209,15 @@ export type Etkinlik = {
 export type BasvuruItem = {
   id: number;
   tip: "kurs" | "etkinlik";
+  basvuru_icin?: "kendisi" | "cocuk";
+  cocuk?: {
+    id: number;
+    ad: string | null;
+    soyad: string | null;
+    tam_adi: string;
+    tc_kimlik_no: string | null;
+    dogum_tarihi: string | null;
+  } | null;
   durum: { kod: string; ad: string } | null;
   yedek_sira: number | null;
   iptal_tarihi: string | null;

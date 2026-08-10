@@ -25,6 +25,32 @@ export function formatDate(iso: string | null | undefined): string {
   }).format(d);
 }
 
+/** GG.AA.YYYY girişini biçimlendirir. */
+export function formatDogumInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+}
+
+/** GG.AA.YYYY → YYYY-MM-DD; geçersizse null. */
+export function dogumToIso(display: string): string | null {
+  const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(display.trim());
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
 export function basvuruLabel(kod: BasvuruDurumuKod | string): string {
   return (
     {
@@ -82,6 +108,7 @@ export function mapKurs(api: KursApi): Kurs {
     ikamet_sarti: api.ikamet_sarti ?? null,
     ikamet_sarti_label: api.ikamet_sarti_label ?? null,
     ozet: [api.alan?.ad, api.brans?.ad, api.kurs_tipi?.ad].filter(Boolean).join(" · "),
+    aciklama: api.aciklama ?? null,
     haftalik_program: mapProgram(api.haftalik_program),
   };
 }

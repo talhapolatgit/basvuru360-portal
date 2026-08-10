@@ -140,14 +140,86 @@
 
 .detail__actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.65rem;
   padding: 1.15rem;
   background: var(--surface);
   border: 1px solid rgba(12, 33, 56, 0.08);
   border-radius: 16px;
   box-shadow: var(--shadow);
+}
+
+.detail__aciklama {
+  margin-bottom: 1.75rem;
+}
+
+.detail__prose {
+  padding: 1.05rem 1.15rem;
+  background: var(--surface);
+  border: 1px solid rgba(12, 33, 56, 0.08);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.detail__prose :first-child {
+  margin-top: 0;
+}
+
+.detail__prose :last-child {
+  margin-bottom: 0;
+}
+
+.detail__prose p {
+  margin: 0 0 0.85rem;
+}
+
+.detail__prose ul,
+.detail__prose ol {
+  margin: 0 0 0.85rem;
+  padding-left: 1.5rem;
+}
+
+.detail__prose ul {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.detail__prose ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+.detail__prose li {
+  display: list-item;
+  margin: 0.15em 0;
+}
+
+.detail__prose a {
+  color: var(--accent-deep);
+  font-weight: 600;
+}
+
+.detail__prose a:hover {
+  text-decoration: underline;
+}
+
+.detail__prose [style*="text-align:center"],
+.detail__prose [style*="text-align: center"] {
+  text-align: center;
+}
+
+.detail__prose [style*="text-align:right"],
+.detail__prose [style*="text-align: right"] {
+  text-align: right;
+}
+
+.detail__prose [style*="text-align:justify"],
+.detail__prose [style*="text-align: justify"] {
+  text-align: justify;
 }
 
 .detail__back {

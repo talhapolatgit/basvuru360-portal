@@ -29,6 +29,10 @@ import "./CourseFilters.css";
 
 type FilterMode = "kurs" | "etkinlik" | "ortak";
 
+function sameGunler(a: GunKodu[], b: GunKodu[]): boolean {
+  return a.length === b.length && a.every((g, i) => g === b[i]);
+}
+
 function Pager({
   meta,
   page,
@@ -190,7 +194,10 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
         setBrans((prev) => (prev && !bransIds.has(prev) ? "" : prev));
         setKursTipi((prev) => (prev && !tipIds.has(prev) ? "" : prev));
         setTip((prev) => (prev && !etkinlikTipIds.has(prev) ? "" : prev));
-        setGunler((prev) => prev.filter((g) => gunSet.has(g)));
+        setGunler((prev) => {
+          const next = prev.filter((g) => gunSet.has(g));
+          return sameGunler(prev, next) ? prev : next;
+        });
       })
       .catch(() => {
         if (cancelled) return;
@@ -199,7 +206,7 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
         setBranslar([]);
         setKursTipleri([]);
         setEtkinlikTipleri([]);
-        setMevcutGunler([]);
+        setMevcutGunler((prev) => (prev.length === 0 ? prev : []));
       });
     return () => {
       cancelled = true;

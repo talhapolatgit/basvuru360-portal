@@ -388,13 +388,6 @@ export function MyApplications() {
                       </div>
                     ) : null}
                     <div className="modal__actions">
-                      <Link
-                        to={`/etkinlikler/${detailEtkinlik.id}`}
-                        className="btn btn--ghost"
-                        onClick={closeDetail}
-                      >
-                        Etkinlik sayfasına git
-                      </Link>
                       <button
                         type="button"
                         className="btn btn--primary"
@@ -500,6 +493,9 @@ export function MyApplications() {
                         {item.tip === "kurs" ? "Kurs" : "Etkinlik"}
                       </span>
                       {no ? <span className="basvuru-card__no">{no}</span> : null}
+                      {item.basvuru_icin === "cocuk" ? (
+                        <span className="basvuru-card__for">Çocuk için</span>
+                      ) : null}
                     </div>
                     <span className={durumBadgeClass(item.durum?.kod)}>
                       {durumText}
@@ -519,6 +515,26 @@ export function MyApplications() {
                       <dt>Başvuru tarihi</dt>
                       <dd>{formatDate(item.created_at)}</dd>
                     </div>
+                    {item.cocuk ? (
+                      <>
+                        <div className="basvuru-card__fact--wide">
+                          <dt>Çocuk</dt>
+                          <dd>{item.cocuk.tam_adi}</dd>
+                        </div>
+                        {item.cocuk.tc_kimlik_no ? (
+                          <div>
+                            <dt>T.C. Kimlik No</dt>
+                            <dd>{item.cocuk.tc_kimlik_no}</dd>
+                          </div>
+                        ) : null}
+                        {item.cocuk.dogum_tarihi ? (
+                          <div>
+                            <dt>Doğum tarihi</dt>
+                            <dd>{formatDate(item.cocuk.dogum_tarihi)}</dd>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
                     {item.iptal_gerekce ? (
                       <div className="basvuru-card__fact--wide">
                         <dt>İptal gerekçesi</dt>

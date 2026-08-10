@@ -163,6 +163,75 @@
   color: var(--ink-soft);
 }
 
+.apply-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.apply-choice__option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.85rem 0.9rem;
+  border: 1.5px solid rgba(12, 33, 56, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.apply-choice__option:hover {
+  border-color: rgba(12, 33, 56, 0.28);
+  transform: translateY(-1px);
+}
+
+.apply-choice__option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.apply-choice__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.apply-choice__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.apply-choice__desc {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.apply-choice__option.is-selected .apply-choice__desc {
+  color: var(--ink-soft);
+}
+
+.apply-choice__option:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .apply-choice {
+    grid-template-columns: 1fr;
+  }
+}
+
 .apply-note {
   margin: 0;
   font-size: 0.85rem;
@@ -362,6 +431,19 @@
   font-weight: 600;
   color: var(--muted);
   letter-spacing: 0.01em;
+}
+
+.basvuru-card__for {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent-deep);
+  background: var(--accent-soft);
+  border: 1px solid rgba(11, 107, 98, 0.18);
 }
 
 .basvuru-badge {
