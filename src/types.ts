@@ -219,12 +219,18 @@ export type BasvuruItem = {
     dogum_tarihi: string | null;
   } | null;
   durum: { kod: string; ad: string } | null;
+  basari_durum?: {
+    kod: string;
+    ad: string;
+    status_sinifi?: string | null;
+  } | null;
   yedek_sira: number | null;
   iptal_tarihi: string | null;
   iptal_gerekce: { id: number; ad: string } | null;
   onay_tarihi: string | null;
   created_at: string | null;
   iptal_edilebilir: boolean;
+  belge_indirilebilir?: boolean;
   evraklar: Array<{
     id: number;
     evrak_tipi: { id: number; ad: string } | null;

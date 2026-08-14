@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiDownload, apiRequest } from "./client";
 import type { BasvuruItem, Kisi } from "../types";
 
 export async function fetchBasvurularim(tip?: "kurs" | "etkinlik") {
@@ -45,5 +45,12 @@ export async function iptalEtkinlikBasvuru(id: number) {
     method: "POST",
     auth: true,
     body: {},
+  });
+}
+
+export async function downloadKursBelge(id: number) {
+  return apiDownload(`/kurs-basvurulari/${id}/belge`, {
+    auth: true,
+    fallbackFilename: `belge-${id}.pdf`,
   });
 }

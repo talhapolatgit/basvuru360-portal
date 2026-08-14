@@ -244,3 +244,69 @@ export async function apiRequest<T>(
 
   return json.data;
 }
+
+/** Binary/PDF indirme (JWT). Content-Disposition dosya adını kullanır. */
+export async function apiDownload(
+  path: string,
+  options: { auth?: boolean; fallbackFilename?: string; skipRefresh?: boolean } = {},
+): Promise<void> {
+  const { auth = true, fallbackFilename = "indirilen.pdf", skipRefresh = false } = options;
+
+  const url = new URL(`${baseUrl()}${path.startsWith("/") ? path : `/${path}`}`);
+  const headers: Record<string, string> = {
+    Accept: "application/pdf,application/octet-stream,*/*",
+  };
+
+  if (auth) {
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url.toString(), { method: "GET", headers });
+
+  if (res.status === 401 && auth && !skipRefresh) {
+    if (!refreshPromise) {
+      refreshPromise = tryRefresh().finally(() => {
+        refreshPromise = null;
+      });
+    }
+    const ok = await refreshPromise;
+    if (ok) {
+      return apiDownload(path, { ...options, skipRefresh: true });
+    }
+  }
+
+  const contentType = res.headers.get("Content-Type") ?? "";
+  if (!res.ok) {
+    let message = "Dosya indirilemedi.";
+    if (contentType.includes("application/json")) {
+      try {
+        const json = (await res.json()) as ApiEnvelope<unknown>;
+        if (json.message) message = json.message;
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new ApiError(message, res.status);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match =
+    /filename\*=UTF-8''([^;]+)|filename="([^"]+)"|filename=([^;]+)/i.exec(
+      disposition,
+    );
+  const rawName = decodeURIComponent(
+    (match?.[1] || match?.[2] || match?.[3] || fallbackFilename).trim(),
+  );
+  const filename = rawName.replace(/^["']|["']$/g, "") || fallbackFilename;
+
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { WeeklySchedule } from "../components/ListingCards";
 import {
+  downloadKursBelge,
   fetchBasvurularim,
   iptalEtkinlikBasvuru,
   iptalKursBasvuru,
@@ -39,6 +40,36 @@ function durumBadgeClass(kod: string | null | undefined): string {
   }
 }
 
+function basariBadgeClass(
+  kod: string | null | undefined,
+  statusSinifi: string | null | undefined,
+): string {
+  switch ((statusSinifi ?? "").toLowerCase()) {
+    case "status-tamamlanan":
+    case "status-aktif":
+      return "basvuru-badge basvuru-badge--success";
+    case "status-iptal":
+      return "basvuru-badge basvuru-badge--danger";
+    case "status-yedek":
+      return "basvuru-badge basvuru-badge--info";
+    case "status-hazirlik":
+      return "basvuru-badge basvuru-badge--warning";
+  }
+
+  switch (kod) {
+    case "sertifika_hak_etti":
+    case "katilim_belgesi_hak_etti":
+    case "basarili":
+      return "basvuru-badge basvuru-badge--success";
+    case "devamsizlik":
+    case "sinav_basarisiz":
+    case "basarisiz":
+      return "basvuru-badge basvuru-badge--danger";
+    default:
+      return "basvuru-badge basvuru-badge--info";
+  }
+}
+
 export function MyApplications() {
   const sayfaMeta = usePortalSayfaMeta("basvurularim", {
     baslik: "Başvurularım",
@@ -50,6 +81,8 @@ export function MyApplications() {
   const [cancelTarget, setCancelTarget] = useState<BasvuruItem | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const [detailTarget, setDetailTarget] = useState<BasvuruItem | null>(null);
   const [detailKurs, setDetailKurs] = useState<Kurs | null>(null);
@@ -146,9 +179,26 @@ export function MyApplications() {
       setCancelTarget(null);
       await load();
     } catch (err) {
-      setCancelError(err instanceof ApiError ? err.message : "İptal edilemedi.");
+      setCancelError(
+        err instanceof ApiError ? err.message : "İptal işlemi başarısız.",
+      );
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function onDownloadBelge(item: BasvuruItem) {
+    if (item.tip !== "kurs" || downloadingId != null) return;
+    setDownloadingId(item.id);
+    setDownloadError(null);
+    try {
+      await downloadKursBelge(item.id);
+    } catch (err) {
+      setDownloadError(
+        err instanceof ApiError ? err.message : "Belge indirilemedi.",
+      );
+    } finally {
+      setDownloadingId(null);
     }
   }
 
@@ -413,6 +463,7 @@ export function MyApplications() {
       />
 
       {error ? <p className="form-error">{error}</p> : null}
+      {downloadError ? <p className="form-error">{downloadError}</p> : null}
 
       {loading ? (
         <div aria-busy="true" aria-live="polite">
@@ -497,9 +548,21 @@ export function MyApplications() {
                         <span className="basvuru-card__for">Çocuk için</span>
                       ) : null}
                     </div>
-                    <span className={durumBadgeClass(item.durum?.kod)}>
-                      {durumText}
-                    </span>
+                    <div className="basvuru-card__badges">
+                      <span className={durumBadgeClass(item.durum?.kod)}>
+                        {durumText}
+                      </span>
+                      {item.tip === "kurs" && item.basari_durum?.ad ? (
+                        <span
+                          className={basariBadgeClass(
+                            item.basari_durum.kod,
+                            item.basari_durum.status_sinifi,
+                          )}
+                        >
+                          {item.basari_durum.ad}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   <h3 className="basvuru-card__title">{title}</h3>
@@ -543,7 +606,9 @@ export function MyApplications() {
                     ) : null}
                   </dl>
 
-                  {hasDetailId || item.iptal_edilebilir ? (
+                  {hasDetailId ||
+                  item.iptal_edilebilir ||
+                  item.belge_indirilebilir ? (
                     <div className="basvuru-card__actions">
                       {hasDetailId ? (
                         <button
@@ -571,6 +636,36 @@ export function MyApplications() {
                             {item.tip === "kurs"
                               ? "Kurs Detayları"
                               : "Etkinlik Detayları"}
+                          </span>
+                        </button>
+                      ) : null}
+                      {item.belge_indirilebilir ? (
+                        <button
+                          type="button"
+                          className="basvuru-card__btn basvuru-card__btn--belge"
+                          disabled={downloadingId === item.id}
+                          onClick={() => void onDownloadBelge(item)}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" x2="12" y1="15" y2="3" />
+                          </svg>
+                          <span>
+                            {downloadingId === item.id
+                              ? "İndiriliyor…"
+                              : "Belge İndir"}
                           </span>
                         </button>
                       ) : null}
