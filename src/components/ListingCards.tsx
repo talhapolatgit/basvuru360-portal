@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import { basvuruLabel, formatDate, gunUzun } from "../lib/format";
 import type { DersSaati, Etkinlik, Kurs } from "../types";
 import "./ListingCards.css";
@@ -27,9 +28,10 @@ export function WeeklySchedule({ program }: { program: DersSaati[] }) {
 }
 
 export function CourseCard({ kurs }: { kurs: Kurs }) {
+  const { paths } = usePortalPages();
   return (
     <Link
-      to={`/kurslar/${kurs.id}`}
+      to={paths.kurs(kurs.id)}
       className={`list-card list-card--${kurs.basvuru_durumu}`}
     >
       <div className="list-card__accent" aria-hidden="true" />
@@ -85,9 +87,10 @@ export function CourseCard({ kurs }: { kurs: Kurs }) {
 }
 
 export function EventCard({ etkinlik }: { etkinlik: Etkinlik }) {
+  const { paths } = usePortalPages();
   return (
     <Link
-      to={`/etkinlikler/${etkinlik.id}`}
+      to={paths.etkinlik(etkinlik.id)}
       className={`list-card list-card--${etkinlik.basvuru_durumu}`}
     >
       <div className="list-card__accent" aria-hidden="true" />

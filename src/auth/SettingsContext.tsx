@@ -8,10 +8,10 @@ import {
 } from "react";
 import { fetchGenelAyarlar } from "../api/auth";
 import { resolveFaviconUrl } from "../api/client";
-import { readJsonCookie, writeJsonCookie } from "../lib/cookies";
+import { readPersistedJson, writePersistedJson } from "../lib/persist";
 import type { GenelAyarlar } from "../types";
 
-const KURUM_COOKIE = "b360_kurum";
+const KURUM_CACHE = "b360_kurum";
 const DEFAULT_FAVICON = "/favicon.svg";
 
 const fallback: GenelAyarlar = {
@@ -47,7 +47,11 @@ type SettingsContextValue = {
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 function readCachedKurum(): GenelAyarlar | null {
-  return readJsonCookie<GenelAyarlar>(KURUM_COOKIE);
+  return readPersistedJson<GenelAyarlar>(KURUM_CACHE);
+}
+
+function sameAyarlar(a: GenelAyarlar, b: GenelAyarlar): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function applyDocumentHead(ayarlar: GenelAyarlar) {
@@ -87,17 +91,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [ayarlar, setAyarlar] = useState<GenelAyarlar>(
     () => readCachedKurum() ?? fallback,
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => readCachedKurum() === null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const data = await fetchGenelAyarlar();
-        if (!cancelled) {
-          setAyarlar(data);
-          writeJsonCookie(KURUM_COOKIE, data);
-        }
+        if (cancelled) return;
+        setAyarlar((prev) => (sameAyarlar(prev, data) ? prev : data));
+        writePersistedJson(KURUM_CACHE, data);
       } catch {
         if (!cancelled && !readCachedKurum()) {
           setAyarlar(fallback);

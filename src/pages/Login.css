@@ -374,6 +374,10 @@
   background: linear-gradient(180deg, #1f6f8b 0%, #3d9bb3 100%);
 }
 
+.basvuru-card--kres .basvuru-card__accent {
+  background: linear-gradient(180deg, #7a4a1d 0%, #c4893c 100%);
+}
+
 .basvuru-card.is-iptal .basvuru-card__accent {
   background: linear-gradient(180deg, #9aa3ad 0%, #c0c6cc 100%);
 }
@@ -424,6 +428,10 @@
 
 .basvuru-card--etkinlik .basvuru-card__tip {
   color: #1f6f8b;
+}
+
+.basvuru-card--kres .basvuru-card__tip {
+  color: #7a4a1d;
 }
 
 .basvuru-card__no {

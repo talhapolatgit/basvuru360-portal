@@ -84,6 +84,11 @@ function mapSayfaToMenu(
     menuDescription =
       "Başvurularınızı görüntülemek için hesabınıza giriş yapın.";
     icon = iconSrc ? null : "login";
+  } else if (sayfa.kod === "kres-basvuru" && !isAuthenticated) {
+    to = "/giris";
+    menuDescription =
+      menuDescription || "Kreş başvurusu için hesabınıza giriş yapın.";
+    icon = iconSrc ? null : "login";
   } else if (sayfa.kod === "profil" && !isAuthenticated) {
     to = "/giris";
     menuDescription =

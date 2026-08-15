@@ -12,6 +12,7 @@ import {
 import { fetchEtkinlik, fetchKurs } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import {
   basvuruLabel,
   formatDate,
@@ -73,8 +74,10 @@ function basariBadgeClass(
 export function MyApplications() {
   const sayfaMeta = usePortalSayfaMeta("basvurularim", {
     baslik: "Başvurularım",
-    aciklama: "Kurs ve etkinlik başvurularınızı görüntüleyin veya iptal edin.",
+    aciklama: "Kurs, etkinlik ve kreş başvurularınızı görüntüleyin veya iptal edin.",
   });
+  const { paths } = usePortalPages();
+  const kresPath = paths.kres;
   const [items, setItems] = useState<BasvuruItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,8 +132,13 @@ export function MyApplications() {
         ? detailTarget.kurs?.id
         : detailTarget.etkinlik?.id;
 
-    if (!id) {
-      setDetailError("Kayıt bilgisi bulunamadı.");
+    if (detailTarget.tip === "kres" || !id) {
+      setDetailError(
+        detailTarget.tip === "kres"
+          ? null
+          : "Kayıt bilgisi bulunamadı.",
+      );
+      setDetailLoading(false);
       return;
     }
 
@@ -496,7 +504,8 @@ export function MyApplications() {
       {!loading && !error && items.length === 0 ? (
         <p className="listing__empty">
           Henüz başvurunuz yok.{" "}
-          <Link to="/kurslar">Kurslara göz atın</Link>
+          <Link to={paths.kurslar}>Kurslara</Link> veya{" "}
+          <Link to={kresPath}>kreş başvurusuna</Link> göz atın.
         </p>
       ) : null}
 
@@ -506,8 +515,12 @@ export function MyApplications() {
             const title =
               item.tip === "kurs"
                 ? item.kurs?.brans || `Kurs #${item.kurs?.kurs_no ?? item.id}`
-                : item.etkinlik?.ad ||
-                  `Etkinlik #${item.etkinlik?.etkinlik_no ?? item.id}`;
+                : item.tip === "kres"
+                  ? [item.kres?.okul, item.kres?.grup]
+                      .filter(Boolean)
+                      .join(" · ") || "Kreş başvurusu"
+                  : item.etkinlik?.ad ||
+                    `Etkinlik #${item.etkinlik?.etkinlik_no ?? item.id}`;
             const durumText = [
               item.durum?.ad ?? "—",
               item.yedek_sira ? `Yedek #${item.yedek_sira}` : null,
@@ -516,20 +529,26 @@ export function MyApplications() {
               .join(" · ");
 
             const hasDetailId =
-              item.tip === "kurs" ? Boolean(item.kurs?.id) : Boolean(item.etkinlik?.id);
+              item.tip === "kurs"
+                ? Boolean(item.kurs?.id)
+                : item.tip === "etkinlik"
+                  ? Boolean(item.etkinlik?.id)
+                  : false;
 
             const no =
               item.tip === "kurs"
                 ? item.kurs?.kurs_no
                   ? `#${item.kurs.kurs_no}`
                   : null
-                : item.etkinlik?.etkinlik_no
+                : item.tip === "etkinlik" && item.etkinlik?.etkinlik_no
                   ? `#${item.etkinlik.etkinlik_no}`
                   : null;
             const merkez =
               item.tip === "kurs"
                 ? item.kurs?.merkez
-                : item.etkinlik?.merkez;
+                : item.tip === "kres"
+                  ? item.kres?.okul
+                  : item.etkinlik?.merkez;
 
             return (
               <li
@@ -541,7 +560,11 @@ export function MyApplications() {
                   <div className="basvuru-card__top">
                     <div className="basvuru-card__identity">
                       <span className="basvuru-card__tip">
-                        {item.tip === "kurs" ? "Kurs" : "Etkinlik"}
+                        {item.tip === "kurs"
+                          ? "Kurs"
+                          : item.tip === "kres"
+                            ? "Kreş"
+                            : "Etkinlik"}
                       </span>
                       {no ? <span className="basvuru-card__no">{no}</span> : null}
                       {item.basvuru_icin === "cocuk" ? (
@@ -570,8 +593,20 @@ export function MyApplications() {
                   <dl className="basvuru-card__facts">
                     {merkez ? (
                       <div>
-                        <dt>Merkez</dt>
+                        <dt>{item.tip === "kres" ? "Okul" : "Merkez"}</dt>
                         <dd>{merkez}</dd>
+                      </div>
+                    ) : null}
+                    {item.tip === "kres" && item.kres?.donem ? (
+                      <div>
+                        <dt>Dönem</dt>
+                        <dd>{item.kres.donem}</dd>
+                      </div>
+                    ) : null}
+                    {item.tip === "kres" && item.kres?.yas_araligi ? (
+                      <div>
+                        <dt>Yaş aralığı</dt>
+                        <dd>{item.kres.yas_araligi}</dd>
                       </div>
                     ) : null}
                     <div>

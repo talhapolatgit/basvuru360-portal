@@ -206,9 +206,77 @@ export type Etkinlik = {
   ikamet_sarti_label: string | null;
 };
 
+export type KresSoruTipi =
+  | "metin"
+  | "uzun_metin"
+  | "sayi"
+  | "liste"
+  | "checkbox"
+  | "radio"
+  | "tarih"
+  | "dosya"
+  | "resim"
+  | "tc_kimlik"
+  | "cep_telefonu"
+  | "eposta";
+
+export type KresDonemOzet = {
+  id: number;
+  ad: string;
+  baslangic: string | null;
+  bitis: string | null;
+};
+
+export type KresBasvuruDurum = {
+  acik: boolean;
+  mesaj: string | null;
+  donem: KresDonemOzet | null;
+  soru_formu: { id: number; ad: string; aciklama: string | null } | null;
+};
+
+export type KresOkulSecim = {
+  id: number;
+  ad: string;
+  adres: string | null;
+  telefon: string | null;
+  uygun_grup_sayisi: number;
+};
+
+export type KresGrupSecim = {
+  id: number;
+  ad: string;
+  yas_araligi: string | null;
+  cinsiyet_sarti: string | null;
+  kontenjan: number;
+  kesin_kayit: number;
+};
+
+export type KresSoruSecenek = {
+  id: number;
+  etiket: string;
+};
+
+export type KresSoru = {
+  id: number;
+  tip: KresSoruTipi;
+  baslik: string;
+  aciklama: string | null;
+  zorunlu: boolean;
+  placeholder: string | null;
+  min_deger: number | null;
+  max_deger: number | null;
+  tam_sayi: boolean | null;
+  secenekler: KresSoruSecenek[];
+};
+
+export type KresSoruFormuPayload = {
+  form: { id: number; ad: string; aciklama: string | null } | null;
+  sorular: KresSoru[];
+};
+
 export type BasvuruItem = {
   id: number;
-  tip: "kurs" | "etkinlik";
+  tip: "kurs" | "etkinlik" | "kres";
   basvuru_icin?: "kendisi" | "cocuk";
   cocuk?: {
     id: number;
@@ -249,6 +317,12 @@ export type BasvuruItem = {
     etkinlik_no: string;
     ad: string;
     merkez: string | null;
+  } | null;
+  kres?: {
+    okul: string | null;
+    grup: string | null;
+    donem: string | null;
+    yas_araligi: string | null;
   } | null;
 };
 

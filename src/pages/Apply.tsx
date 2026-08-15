@@ -6,6 +6,7 @@ import { ScrollSelect } from "../components/ScrollSelect";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import { createEtkinlikBasvuru, createKursBasvuru } from "../api/basvurular";
 import {
   fetchEtkinlik,
@@ -51,18 +52,11 @@ function onayFieldName(kod: string): string {
   return kod === "aydinlatma" ? "aydinlatma_onay" : `${kod}_onay`;
 }
 
-export function ApplyCourse() {
-  return <ApplyForm kind="kurs" />;
-}
-
-export function ApplyEvent() {
-  return <ApplyForm kind="etkinlik" />;
-}
-
-function ApplyForm({ kind }: { kind: Kind }) {
+export function ApplyForm({ kind }: { kind: Kind }) {
   const { id } = useParams();
   const { kisi, setKisi, refreshKisi } = useAuth();
   const { ayarlar } = useSettings();
+  const { paths } = usePortalPages();
   const navigate = useNavigate();
   const kimlikAktif = Boolean(ayarlar.kimlik_sorgulama_aktif);
 
@@ -104,8 +98,9 @@ function ApplyForm({ kind }: { kind: Kind }) {
   const [selectedIlId, setSelectedIlId] = useState<number | null>(null);
 
   const item = kind === "kurs" ? kurs : etkinlik;
-  const backTo = kind === "kurs" ? `/kurslar/${id}` : `/etkinlikler/${id}`;
-  const backList = kind === "kurs" ? "/kurslar" : "/etkinlikler";
+  const backTo =
+    kind === "kurs" ? paths.kurs(id ?? "") : paths.etkinlik(id ?? "");
+  const backList = kind === "kurs" ? paths.kurslar : paths.etkinlikler;
 
   const yas = useMemo(() => {
     if (!kisi?.dogum_tarihi) return null;
@@ -332,7 +327,7 @@ function ApplyForm({ kind }: { kind: Kind }) {
           ? `Başvurunuz yedek listeye alındı (sıra: ${result.yedek_sira}).`
           : "Başvurunuz alındı.",
       );
-      setTimeout(() => navigate("/basvurularim"), 1200);
+      setTimeout(() => navigate(paths.basvurularim), 1200);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

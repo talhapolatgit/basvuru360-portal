@@ -80,6 +80,25 @@ function IconApplications() {
   );
 }
 
+function IconKres() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 19.5V10.2L12 4.5l7.5 5.7V19.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.2 19.5v-5.2h5.6v5.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconUser() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -140,6 +159,7 @@ function pageIcon(sayfa: PortalSayfa) {
   if (sayfa.kod === "kurslar") return <IconCourses />;
   if (sayfa.kod === "etkinlikler") return <IconEvents />;
   if (sayfa.kod === "basvurularim") return <IconApplications />;
+  if (sayfa.kod === "kres-basvuru") return <IconKres />;
   if (sayfa.kod === "profil") return <IconUser />;
   return <IconPage />;
 }
@@ -166,7 +186,11 @@ export function Shell() {
           if (s.sadece_giris && !isAuthenticated) {
             return false;
           }
-          if (s.kod === "basvurularim" || s.kod === "profil") {
+          if (
+            s.kod === "basvurularim" ||
+            s.kod === "profil" ||
+            s.kod === "kres-basvuru"
+          ) {
             return isAuthenticated;
           }
           return true;
@@ -246,19 +270,21 @@ export function Shell() {
           <Brand size="md" hideMarkWhenNoLogo logoVariant="sidebar" />
         </div>
 
-        <p className="shell__nav-label">Menü</p>
-        <nav className="shell__links" aria-label="Ana menü">
-          {links.map(renderNavLink)}
-        </nav>
+        <div className="shell__sidebar-nav">
+          <p className="shell__nav-label">Menü</p>
+          <nav className="shell__links" aria-label="Ana menü">
+            {links.map(renderNavLink)}
+          </nav>
+        </div>
 
         <div className="shell__sidebar-bottom">
           {isAuthenticated ? (
-            <>
+            <div className="shell__user-row">
               <p className="shell__user">{kisi?.tam_adi}</p>
-              <button type="button" className="shell__cta" onClick={onLogout}>
+              <button type="button" className="shell__logout" onClick={onLogout}>
                 Çıkış yap
               </button>
-            </>
+            </div>
           ) : (
             <NavLink to="/giris" className="shell__cta">
               Giriş yap
@@ -270,7 +296,6 @@ export function Shell() {
             ) : null}
             {eposta ? <a href={`mailto:${eposta}`}>{eposta}</a> : null}
           </div>
-          <p className="shell__sidebar-powered">Altyapı: Başvuru 360</p>
         </div>
       </aside>
 

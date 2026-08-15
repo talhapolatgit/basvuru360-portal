@@ -35,6 +35,7 @@ export function usePortalSayfaMeta(
   return {
     baslik: sayfa?.baslik?.trim() || fallback.baslik,
     aciklama: sayfa?.aciklama?.trim() || fallback.aciklama,
+    path: sayfa?.path || `/${kod}`,
     sayfa,
   };
 }

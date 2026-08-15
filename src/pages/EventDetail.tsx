@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import { fetchEtkinlik } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { basvuruLabel, formatDate, kosullarMetni, mapEtkinlik } from "../lib/format";
@@ -13,6 +14,7 @@ import "./Detail.css";
 export function EventDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
+  const { paths } = usePortalPages();
   const [etkinlik, setEtkinlik] = useState<Etkinlik | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,19 +73,19 @@ export function EventDetail() {
     return (
       <div className="page page--narrow page-enter">
         <p>{error || "Etkinlik bulunamadı."}</p>
-        <Link to="/etkinlikler">Etkinliklere dön</Link>
+        <Link to={paths.etkinlikler}>Etkinliklere dön</Link>
       </div>
     );
   }
 
   const canApply = etkinlik.basvuru_durumu === "acik";
   const applyTo = isAuthenticated
-    ? `/etkinlikler/${etkinlik.id}/basvuru`
-    : `/giris?next=${encodeURIComponent(`/etkinlikler/${etkinlik.id}/basvuru`)}`;
+    ? paths.etkinlikBasvuru(etkinlik.id)
+    : `/giris?next=${encodeURIComponent(paths.etkinlikBasvuru(etkinlik.id))}`;
 
   return (
     <article className="page page--narrow detail page-enter">
-      <Link to="/etkinlikler" className="detail__back">
+      <Link to={paths.etkinlikler} className="detail__back">
         ← Etkinliklere dön
       </Link>
 

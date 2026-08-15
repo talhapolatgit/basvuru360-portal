@@ -5,6 +5,7 @@ import { PageHeader } from "../components/PageHeader";
 import { ShareButton } from "../components/ShareButton";
 import { WeeklySchedule } from "../components/ListingCards";
 import { useAuth } from "../auth/AuthContext";
+import { usePortalPages } from "../auth/PortalPagesContext";
 import { fetchKurs } from "../api/catalog";
 import { ApiError } from "../api/client";
 import { basvuruLabel, formatDate, kosullarMetni, mapKurs } from "../lib/format";
@@ -15,6 +16,7 @@ import "./Detail.css";
 export function CourseDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
+  const { paths } = usePortalPages();
   const [kurs, setKurs] = useState<Kurs | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function CourseDetail() {
 
   if (loading) {
     return (
-      <DetailLayout backTo="/kurslar" backLabel="Kurslara dön">
+      <DetailLayout backTo={paths.kurslar} backLabel="Kurslara dön">
         <div className="detail-skeleton" aria-busy="true" aria-live="polite">
           <span className="visually-hidden">Kurs detayı yükleniyor</span>
           <div className="detail-skeleton__header">
@@ -68,7 +70,7 @@ export function CourseDetail() {
 
   if (!kurs) {
     return (
-      <DetailLayout backTo="/kurslar" backLabel="Kurslara dön">
+      <DetailLayout backTo={paths.kurslar} backLabel="Kurslara dön">
         <p>{error || "Kurs bulunamadı."}</p>
       </DetailLayout>
     );
@@ -76,11 +78,11 @@ export function CourseDetail() {
 
   const canApply = kurs.basvuru_durumu === "acik";
   const applyTo = isAuthenticated
-    ? `/kurslar/${kurs.id}/basvuru`
-    : `/giris?next=${encodeURIComponent(`/kurslar/${kurs.id}/basvuru`)}`;
+    ? paths.kursBasvuru(kurs.id)
+    : `/giris?next=${encodeURIComponent(paths.kursBasvuru(kurs.id))}`;
 
   return (
-    <DetailLayout backTo="/kurslar" backLabel="Kurslara dön">
+    <DetailLayout backTo={paths.kurslar} backLabel="Kurslara dön">
       <article className="detail">
         <PageHeader
           eyebrow={`#${kurs.kurs_no}`}

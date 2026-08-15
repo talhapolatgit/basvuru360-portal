@@ -7,14 +7,16 @@ import {
   type ReactNode,
 } from "react";
 import { fetchPortalSayfalar } from "../api/catalog";
-import { readJsonCookie, writeJsonCookie } from "../lib/cookies";
+import { readPersistedJson, writePersistedJson } from "../lib/persist";
+import { buildPortalPaths, type PortalPaths } from "../lib/portalPaths";
 import type { PortalSayfa } from "../types";
 
-const SAYFALAR_COOKIE = "b360_portal_sayfalar";
+const SAYFALAR_CACHE = "b360_portal_sayfalar";
 
 type PortalPagesContextValue = {
   sayfalar: PortalSayfa[];
   loading: boolean;
+  paths: PortalPaths;
 };
 
 const PortalPagesContext = createContext<PortalPagesContextValue | null>(null);
@@ -27,7 +29,7 @@ function normalizeSayfalar(items: PortalSayfa[]): PortalSayfa[] {
 }
 
 function readCachedSayfalar(): PortalSayfa[] | null {
-  const cached = readJsonCookie<PortalSayfa[]>(SAYFALAR_COOKIE);
+  const cached = readPersistedJson<PortalSayfa[]>(SAYFALAR_CACHE);
   if (!Array.isArray(cached)) return null;
   return normalizeSayfalar(cached);
 }
@@ -52,7 +54,7 @@ export function PortalPagesProvider({ children }: { children: ReactNode }) {
           if (sameSayfalar(prev, items)) return prev;
           return items;
         });
-        writeJsonCookie(SAYFALAR_COOKIE, items);
+        writePersistedJson(SAYFALAR_CACHE, items);
       } catch {
         if (!cancelled && !readCachedSayfalar()) {
           setSayfalar([]);
@@ -67,7 +69,7 @@ export function PortalPagesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ sayfalar, loading }),
+    () => ({ sayfalar, loading, paths: buildPortalPaths(sayfalar) }),
     [sayfalar, loading],
   );
 

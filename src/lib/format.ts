@@ -33,6 +33,29 @@ export function formatDogumInput(raw: string): string {
   return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
 }
 
+/** YYYY-MM-DD → GG.AA.YYYY */
+export function isoToDogumDisplay(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
+  if (!match) return "";
+  return `${match[3]}.${match[2]}.${match[1]}`;
+}
+
+/** 05xx xxx xx xx */
+export function formatCepTelefonu(raw: string): string {
+  let digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 10 && digits.startsWith("5")) {
+    digits = `0${digits}`;
+  }
+  digits = digits.slice(0, 11);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+  if (digits.length <= 9) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  }
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9, 11)}`;
+}
+
 /** GG.AA.YYYY → YYYY-MM-DD; geçersizse null. */
 export function dogumToIso(display: string): string | null {
   const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(display.trim());

@@ -68,16 +68,32 @@ function Pager({
   );
 }
 
-export function CatalogPage({ slug: slugProp }: { slug?: string }) {
+export function CatalogPage({
+  slug: slugProp,
+  kod,
+}: {
+  slug?: string;
+  kod?: string;
+}) {
   const params = useParams();
   const location = useLocation();
-  const slug = slugProp || params.slug || "";
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { sayfalar } = usePortalPages();
   const sayfalarRef = useRef(sayfalar);
   sayfalarRef.current = sayfalar;
 
-  const cachedSayfa = sayfalar.find((s) => s.slug === slug) ?? null;
+  const slug =
+    slugProp ||
+    (kod
+      ? sayfalar.find((item) => item.kod === kod)?.slug || kod
+      : null) ||
+    params.slug ||
+    "";
+
+  const cachedSayfa =
+    (kod ? sayfalar.find((s) => s.kod === kod) : null) ??
+    sayfalar.find((s) => s.slug === slug) ??
+    null;
 
   const [sayfa, setSayfa] = useState<PortalSayfa | null>(cachedSayfa);
   const [metaLoading, setMetaLoading] = useState(!cachedSayfa);
@@ -116,7 +132,11 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
   useEffect(() => {
     let cancelled = false;
     const fromCache =
-      sayfalarRef.current.find((s) => s.slug === slug) ?? null;
+      (kod
+        ? sayfalarRef.current.find((s) => s.kod === kod)
+        : null) ??
+      sayfalarRef.current.find((s) => s.slug === slug) ??
+      null;
 
     setSayfa(fromCache);
     setMetaLoading(!fromCache);
@@ -154,7 +174,7 @@ export function CatalogPage({ slug: slugProp }: { slug?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, kod]);
 
   const mode: FilterMode | null = useMemo(() => {
     if (!sayfa) return null;

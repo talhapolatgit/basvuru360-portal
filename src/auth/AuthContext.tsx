@@ -14,22 +14,26 @@ import {
   register as apiRegister,
 } from "../api/auth";
 import { clearTokens, getAccessToken } from "../api/client";
-import { deleteCookie, readJsonCookie, writeJsonCookie } from "../lib/cookies";
+import {
+  deletePersistedJson,
+  readPersistedJson,
+  writePersistedJson,
+} from "../lib/persist";
 import type { Kisi } from "../types";
 
-const KISI_COOKIE = "b360_kisi";
+const KISI_CACHE = "b360_kisi";
 
 function readCachedKisi(): Kisi | null {
   if (!getAccessToken()) {
-    deleteCookie(KISI_COOKIE);
+    deletePersistedJson(KISI_CACHE);
     return null;
   }
-  return readJsonCookie<Kisi>(KISI_COOKIE);
+  return readPersistedJson<Kisi>(KISI_CACHE);
 }
 
 function persistKisi(kisi: Kisi | null) {
-  if (kisi) writeJsonCookie(KISI_COOKIE, kisi);
-  else deleteCookie(KISI_COOKIE);
+  if (kisi) writePersistedJson(KISI_CACHE, kisi);
+  else deletePersistedJson(KISI_CACHE);
 }
 
 type AuthContextValue = {
