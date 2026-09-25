@@ -7,6 +7,7 @@ import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
 import { usePortalPages } from "../auth/PortalPagesContext";
+import { fetchYakinlar, type KisiYakinItem } from "../api/auth";
 import { createEtkinlikBasvuru, createKursBasvuru } from "../api/basvurular";
 import {
   fetchEtkinlik,
@@ -18,6 +19,7 @@ import { ApiError } from "../api/client";
 import {
   dogumToIso,
   formatDogumInput,
+  isoToDogumDisplay,
   mapEtkinlik,
   mapKurs,
 } from "../lib/format";
@@ -59,6 +61,8 @@ export function ApplyForm({ kind }: { kind: Kind }) {
   const { paths } = usePortalPages();
   const navigate = useNavigate();
   const kimlikAktif = Boolean(ayarlar.kimlik_sorgulama_aktif);
+  const yakinIcinBasvuruAktif = ayarlar.yakin_icin_basvuru_aktif !== false;
+  const manuelYakinEklemeAktif = ayarlar.manuel_yakin_ekleme_aktif !== false;
 
   const [kurs, setKurs] = useState<Kurs | null>(null);
   const [etkinlik, setEtkinlik] = useState<Etkinlik | null>(null);
@@ -86,9 +90,15 @@ export function ApplyForm({ kind }: { kind: Kind }) {
     cocuk_soyad: "",
     cocuk_tc_kimlik_no: "",
     cocuk_dogum_tarihi: "",
+    yakinlik_derecesi: "" as "" | "ESI" | "OGLU" | "KIZI",
   });
   const [basvuruIcin, setBasvuruIcin] = useState<"kendisi" | "cocuk">(
     "kendisi",
+  );
+  const [yakinlar, setYakinlar] = useState<KisiYakinItem[]>([]);
+  const [yakinlarLoading, setYakinlarLoading] = useState(false);
+  const [selectedYakinId, setSelectedYakinId] = useState<number | "yeni" | null>(
+    null,
   );
   const [files, setFiles] = useState<Record<number, File | null>>({});
   const [onaylar, setOnaylar] = useState<Record<string, boolean>>({});
@@ -113,7 +123,8 @@ export function ApplyForm({ kind }: { kind: Kind }) {
   }, [kisi?.dogum_tarihi]);
 
   const needsVeli = basvuruIcin === "kendisi" && yas !== null && yas < 18;
-  const cocukBasvurusuIzinli = yas === null || yas >= 18;
+  const cocukBasvurusuIzinli =
+    yakinIcinBasvuruAktif && (yas === null || yas >= 18);
   const cocukAdina = basvuruIcin === "cocuk" && cocukBasvurusuIzinli;
   const evrakTipleri = item?.evrak_zorunlu ? item.evrak_tipleri : [];
   const basvuruOnaylari = item?.basvuru_onaylari ?? [];
@@ -163,6 +174,70 @@ export function ApplyForm({ kind }: { kind: Kind }) {
       }));
     }
   }, [cocukBasvurusuIzinli, basvuruIcin, kisi?.cinsiyet]);
+
+  useEffect(() => {
+    if (basvuruIcin !== "cocuk") {
+      setSelectedYakinId(null);
+      return;
+    }
+
+    let cancelled = false;
+    setYakinlarLoading(true);
+    void fetchYakinlar()
+      .then((items) => {
+        if (cancelled) return;
+        setYakinlar(items);
+        if (items.length === 0) {
+          setSelectedYakinId(manuelYakinEklemeAktif ? "yeni" : null);
+        } else {
+          setSelectedYakinId(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setYakinlar([]);
+          setSelectedYakinId(manuelYakinEklemeAktif ? "yeni" : null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setYakinlarLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [basvuruIcin, manuelYakinEklemeAktif]);
+
+  function selectKayitliYakin(yakin: KisiYakinItem) {
+    setSelectedYakinId(yakin.id);
+    setForm((f) => ({
+      ...f,
+      cocuk_ad: yakin.ad ?? "",
+      cocuk_soyad: yakin.soyad ?? "",
+      cocuk_tc_kimlik_no: yakin.tc_kimlik_no ?? "",
+      cocuk_dogum_tarihi: isoToDogumDisplay(yakin.dogum_tarihi),
+      cinsiyet: yakin.cinsiyet ?? "",
+      yakinlik_derecesi:
+        yakin.yakinlik_derecesi === "ESI" ||
+        yakin.yakinlik_derecesi === "OGLU" ||
+        yakin.yakinlik_derecesi === "KIZI"
+          ? yakin.yakinlik_derecesi
+          : "",
+    }));
+  }
+
+  function selectYeniYakin() {
+    setSelectedYakinId("yeni");
+    setForm((f) => ({
+      ...f,
+      cocuk_ad: "",
+      cocuk_soyad: "",
+      cocuk_tc_kimlik_no: "",
+      cocuk_dogum_tarihi: "",
+      cinsiyet: "",
+      yakinlik_derecesi: "",
+    }));
+  }
 
   useEffect(() => {
     if (!missing.il && !missing.ilce) return;
@@ -271,6 +346,36 @@ export function ApplyForm({ kind }: { kind: Kind }) {
 
       fd.append("basvuru_icin", basvuruIcin);
       if (cocukAdina) {
+        if (yakinlar.length > 0 && selectedYakinId === null) {
+          setError(
+            manuelYakinEklemeAktif
+              ? "Başvuru için bir yakın seçin veya yeni yakın ekleyin."
+              : "Başvuru için kayıtlı bir yakın seçin.",
+          );
+          setSubmitting(false);
+          return;
+        }
+        if (!manuelYakinEklemeAktif && selectedYakinId === "yeni") {
+          setError("Manuel yakın ekleme kapalıdır. Kayıtlı bir yakın seçin.");
+          setSubmitting(false);
+          return;
+        }
+        if (
+          manuelYakinEklemeAktif &&
+          (selectedYakinId === "yeni" || yakinlar.length === 0) &&
+          !form.yakinlik_derecesi
+        ) {
+          setFieldErrors({
+            yakinlik_derecesi: ["Yakınlık derecesi seçmelisiniz."],
+          });
+          setSubmitting(false);
+          return;
+        }
+        if (!manuelYakinEklemeAktif && yakinlar.length === 0) {
+          setError("Kayıtlı yakınınız bulunmuyor. Yakın adına başvuru yapılamaz.");
+          setSubmitting(false);
+          return;
+        }
         const cocukDogumIso = dogumToIso(form.cocuk_dogum_tarihi);
         if (!cocukDogumIso) {
           setFieldErrors({
@@ -285,6 +390,9 @@ export function ApplyForm({ kind }: { kind: Kind }) {
         fd.append("cocuk_soyad", form.cocuk_soyad.trim());
         fd.append("cocuk_tc_kimlik_no", form.cocuk_tc_kimlik_no.trim());
         fd.append("cocuk_dogum_tarihi", cocukDogumIso);
+        if (form.yakinlik_derecesi) {
+          fd.append("yakinlik_derecesi", form.yakinlik_derecesi);
+        }
       }
 
       if (!cocukAdina && (needsVeli || form.veli_tc_kimlik_no)) {
@@ -485,12 +593,23 @@ export function ApplyForm({ kind }: { kind: Kind }) {
                       checked={basvuruIcin === "cocuk"}
                       onChange={() => {
                         setBasvuruIcin("cocuk");
-                        setForm((f) => ({ ...f, cinsiyet: "" }));
+                        setForm((f) => ({
+                          ...f,
+                          cinsiyet: "",
+                          cocuk_ad: "",
+                          cocuk_soyad: "",
+                          cocuk_tc_kimlik_no: "",
+                          cocuk_dogum_tarihi: "",
+                          yakinlik_derecesi: "",
+                        }));
+                        setSelectedYakinId(null);
                       }}
                     />
-                    <span className="apply-choice__title">Çocuğum için</span>
+                    <span className="apply-choice__title">
+                      Çocuğum veya eşim için
+                    </span>
                     <span className="apply-choice__desc">
-                      Velisi olduğum çocuk adına başvuruyorum
+                      Çocuğum veya eşim adına başvuruyorum
                     </span>
                   </label>
                 </div>
@@ -504,7 +623,117 @@ export function ApplyForm({ kind }: { kind: Kind }) {
 
             {cocukAdina ? (
               <fieldset className="apply-fieldset">
-                <legend>Çocuk bilgileri</legend>
+                <legend>Yakın bilgileri</legend>
+                {yakinlarLoading ? (
+                  <p className="login__hint" style={{ textAlign: "left" }}>
+                    Kayıtlı yakınlar yükleniyor…
+                  </p>
+                ) : null}
+                {!yakinlarLoading && yakinlar.length > 0 ? (
+                  <div
+                    className="apply-choice apply-choice--stack"
+                    role="radiogroup"
+                    aria-label="Kayıtlı yakınlar"
+                  >
+                    {yakinlar.map((yakin) => (
+                      <label
+                        key={yakin.id}
+                        className={`apply-choice__option${
+                          selectedYakinId === yakin.id ? " is-selected" : ""
+                        }`}
+                      >
+                        <input
+                          className="apply-choice__input"
+                          type="radio"
+                          name="kayitli_yakin"
+                          checked={selectedYakinId === yakin.id}
+                          onChange={() => selectKayitliYakin(yakin)}
+                        />
+                        <span className="apply-choice__title">
+                          {yakin.tam_adi}
+                        </span>
+                        <span className="apply-choice__desc">
+                          {[
+                            yakin.yakinlik_label,
+                            yakin.tc_kimlik_no,
+                            yakin.dogum_tarihi
+                              ? isoToDogumDisplay(yakin.dogum_tarihi)
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </label>
+                    ))}
+                    {manuelYakinEklemeAktif ? (
+                      <label
+                        className={`apply-choice__option${
+                          selectedYakinId === "yeni" ? " is-selected" : ""
+                        }`}
+                      >
+                        <input
+                          className="apply-choice__input"
+                          type="radio"
+                          name="kayitli_yakin"
+                          checked={selectedYakinId === "yeni"}
+                          onChange={() => selectYeniYakin()}
+                        />
+                        <span className="apply-choice__title">Yeni yakın</span>
+                        <span className="apply-choice__desc">
+                          Bilgileri elle girerek yeni yakın için başvur
+                        </span>
+                      </label>
+                    ) : null}
+                  </div>
+                ) : null}
+                {!yakinlarLoading &&
+                !manuelYakinEklemeAktif &&
+                yakinlar.length === 0 ? (
+                  <p className="login__hint" style={{ textAlign: "left" }}>
+                    Kayıtlı yakınınız bulunmuyor. Manuel yakın ekleme kapalı
+                    olduğu için yakın adına başvuru yapılamaz.
+                  </p>
+                ) : null}
+                {!yakinlarLoading &&
+                yakinlar.length > 0 &&
+                selectedYakinId === null ? (
+                  <p className="login__hint" style={{ textAlign: "left" }}>
+                    {manuelYakinEklemeAktif
+                      ? "Başvuru için bir yakın seçin veya yeni yakın ekleyin."
+                      : "Başvuru için kayıtlı bir yakın seçin."}
+                  </p>
+                ) : null}
+                {!yakinlarLoading &&
+                manuelYakinEklemeAktif &&
+                (yakinlar.length === 0 || selectedYakinId === "yeni") ? (
+                  <>
+                <label className="field">
+                  <span>Yakınlık derecesi *</span>
+                  <select
+                    value={form.yakinlik_derecesi}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        yakinlik_derecesi: e.target.value as
+                          | ""
+                          | "ESI"
+                          | "OGLU"
+                          | "KIZI",
+                      })
+                    }
+                    required
+                  >
+                    <option value="">Seçiniz</option>
+                    <option value="ESI">Eşi</option>
+                    <option value="OGLU">Oğlu</option>
+                    <option value="KIZI">Kızı</option>
+                  </select>
+                  {fieldErrors.yakinlik_derecesi?.[0] ? (
+                    <small className="field-error">
+                      {fieldErrors.yakinlik_derecesi[0]}
+                    </small>
+                  ) : null}
+                </label>
                 <div className="field-row">
                   <label className="field">
                     <span>Ad *</span>
@@ -598,6 +827,8 @@ export function ApplyForm({ kind }: { kind: Kind }) {
                       </small>
                     ) : null}
                   </label>
+                ) : null}
+                  </>
                 ) : null}
               </fieldset>
             ) : null}
@@ -891,7 +1122,16 @@ export function ApplyForm({ kind }: { kind: Kind }) {
             <button
               type="submit"
               className="btn btn--primary btn--block"
-              disabled={submitting || Boolean(success)}
+              disabled={
+                submitting ||
+                Boolean(success) ||
+                (cocukAdina &&
+                  yakinlar.length > 0 &&
+                  selectedYakinId === null) ||
+                (cocukAdina &&
+                  !manuelYakinEklemeAktif &&
+                  yakinlar.length === 0)
+              }
             >
               {success
                 ? "Yönlendiriliyor…"

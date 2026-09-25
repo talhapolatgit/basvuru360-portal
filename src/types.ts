@@ -46,6 +46,8 @@ export type GenelAyarlar = {
     kod: GirisYontemiKod;
     label: string;
   };
+  yakin_icin_basvuru_aktif?: boolean;
+  manuel_yakin_ekleme_aktif?: boolean;
   kimlik_sorgulama_aktif?: boolean;
 };
 

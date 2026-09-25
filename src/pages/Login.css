@@ -43,6 +43,13 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.field input:read-only,
+.field select:disabled {
+  background: #f4f6f8;
+  color: var(--muted);
+  cursor: default;
+}
+
 .field__password {
   position: relative;
   display: flex;
@@ -167,6 +174,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
+}
+
+.apply-choice--stack {
+  grid-template-columns: 1fr;
 }
 
 .apply-choice__option {

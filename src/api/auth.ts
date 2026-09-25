@@ -32,6 +32,25 @@ export async function fetchMe(): Promise<Kisi> {
   return apiRequest<Kisi>("/auth/me", { auth: true });
 }
 
+export type KisiYakinItem = {
+  id: number;
+  ad: string;
+  soyad: string;
+  tam_adi: string;
+  tc_kimlik_no: string | null;
+  dogum_tarihi: string | null;
+  cinsiyet: "erkek" | "kadin" | null;
+  yakinlik_derecesi: string | null;
+  yakinlik_label: string | null;
+};
+
+export async function fetchYakinlar(): Promise<KisiYakinItem[]> {
+  const data = await apiRequest<{ items: KisiYakinItem[] }>("/auth/yakinlar", {
+    auth: true,
+  });
+  return data.items;
+}
+
 export async function updateProfil(
   body: Record<string, string | null>,
 ): Promise<Kisi> {
