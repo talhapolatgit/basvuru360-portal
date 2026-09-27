@@ -144,6 +144,7 @@ export function mapEtkinlik(api: EtkinlikApi): Etkinlik {
     ad: api.ad,
     tip: api.etkinlik_tipi?.ad ?? "—",
     merkez: api.merkez?.ad ?? "—",
+    etkinlik_yeri: api.etkinlik_yeri?.trim() || null,
     il: api.merkez?.il ?? "",
     ilce: api.merkez?.ilce ?? "",
     kontenjan: api.kontenjan,

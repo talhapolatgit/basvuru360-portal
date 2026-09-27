@@ -107,6 +107,12 @@ export function EventDetail() {
             {etkinlik.ilce ? ` · ${etkinlik.ilce}` : ""}
           </dd>
         </div>
+        {etkinlik.etkinlik_yeri ? (
+          <div>
+            <dt>Etkinlik yeri</dt>
+            <dd>{etkinlik.etkinlik_yeri}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Tarih</dt>
           <dd>

@@ -128,6 +128,7 @@ export type EtkinlikApi = {
   ad: string;
   aciklama: string | null;
   merkez: { id: number; ad: string; il: string | null; ilce: string | null } | null;
+  etkinlik_yeri?: string | null;
   etkinlik_tipi: { id: number; ad: string } | null;
   kontenjan: number;
   yedek_kontenjan: number;
@@ -188,6 +189,7 @@ export type Etkinlik = {
   ad: string;
   tip: string;
   merkez: string;
+  etkinlik_yeri: string | null;
   il: string;
   ilce: string;
   kontenjan: number;
