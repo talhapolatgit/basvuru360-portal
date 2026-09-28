@@ -60,7 +60,7 @@ export async function fetchKurslar(query: Record<string, string | number | undef
 }
 
 export async function fetchKurs(id: number | string) {
-  return apiRequest<KursApi>(`/kurslar/${id}`);
+  return apiRequest<KursApi>(`/kurslar/${id}`, { auth: true });
 }
 
 export async function fetchEtkinlikler(
@@ -70,7 +70,7 @@ export async function fetchEtkinlikler(
 }
 
 export async function fetchEtkinlik(id: number | string) {
-  return apiRequest<EtkinlikApi>(`/etkinlikler/${id}`);
+  return apiRequest<EtkinlikApi>(`/etkinlikler/${id}`, { auth: true });
 }
 
 async function lookup(path: string, query?: Record<string, string | number | undefined | null>) {
