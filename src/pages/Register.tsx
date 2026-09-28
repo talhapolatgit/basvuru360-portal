@@ -41,16 +41,60 @@ export function Register() {
     setForm((f) => ({ ...f, [name]: value }));
   }
 
+  function validate(): Record<string, string[]> {
+    const errors: Record<string, string[]> = {};
+    const bos = (value: string) => value.trim() === "";
+    const ekle = (name: string, message: string) => {
+      errors[name] = [message];
+    };
+
+    if (bos(form.ad)) ekle("ad", "Ad zorunludur.");
+    if (bos(form.soyad)) ekle("soyad", "Soyad zorunludur.");
+    if (bos(form.telefon)) ekle("telefon", "Telefon zorunludur.");
+
+    if (bos(form.tc_kimlik_no)) {
+      ekle("tc_kimlik_no", "T.C. kimlik numarası zorunludur.");
+    } else if (form.tc_kimlik_no.length !== 11) {
+      ekle("tc_kimlik_no", "T.C. kimlik numarası 11 haneli olmalıdır.");
+    }
+    if (bos(form.dogum_tarihi)) ekle("dogum_tarihi", "Doğum tarihi zorunludur.");
+
+    if (yontem === "eposta_sifre" && bos(form.email)) {
+      ekle("email", "E-posta adresi zorunludur.");
+    }
+
+    if (needsPassword) {
+      if (bos(form.password)) {
+        ekle("password", "Şifre zorunludur.");
+      } else if (bos(form.password_confirmation)) {
+        ekle("password_confirmation", "Şifre tekrarı zorunludur.");
+      } else if (form.password !== form.password_confirmation) {
+        ekle("password_confirmation", "Şifre onayı eşleşmiyor.");
+      }
+    }
+
+    return errors;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setFieldErrors({});
+
+    const clientErrors = validate();
+    setFieldErrors(clientErrors);
+    if (Object.keys(clientErrors).length > 0) {
+      setError("Lütfen işaretli alanları kontrol edin.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const body: Record<string, string> = {
         ad: form.ad,
         soyad: form.soyad,
         telefon: form.telefon,
+        tc_kimlik_no: form.tc_kimlik_no,
+        dogum_tarihi: form.dogum_tarihi,
         il: form.il,
         ilce: form.ilce,
         adres: form.adres,
@@ -61,11 +105,7 @@ export function Register() {
         body.email = form.email;
         body.password = form.password;
         body.password_confirmation = form.password_confirmation;
-        if (form.tc_kimlik_no) body.tc_kimlik_no = form.tc_kimlik_no;
-        if (form.dogum_tarihi) body.dogum_tarihi = form.dogum_tarihi;
       } else {
-        body.tc_kimlik_no = form.tc_kimlik_no;
-        body.dogum_tarihi = form.dogum_tarihi;
         if (form.email) body.email = form.email;
         if (needsPassword) {
           body.password = form.password;
@@ -110,62 +150,53 @@ export function Register() {
             </label>
           </div>
 
-          {yontem === "eposta_sifre" ? (
-            <label className="field">
-              <span>E-posta</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => set("email", e.target.value)}
-                required
-              />
-              {err("email") ? <small className="field-error">{err("email")}</small> : null}
-            </label>
-          ) : (
-            <>
-              <label className="field">
-                <span>T.C. Kimlik No</span>
-                <input
-                  inputMode="numeric"
-                  maxLength={11}
-                  value={form.tc_kimlik_no}
-                  onChange={(e) => set("tc_kimlik_no", e.target.value.replace(/\D/g, ""))}
-                  required
-                />
-                {err("tc_kimlik_no") ? (
-                  <small className="field-error">{err("tc_kimlik_no")}</small>
-                ) : null}
-              </label>
-              <label className="field">
-                <span>Doğum tarihi</span>
-                <input
-                  type="date"
-                  value={form.dogum_tarihi}
-                  onChange={(e) => set("dogum_tarihi", e.target.value)}
-                  required
-                />
-                {err("dogum_tarihi") ? (
-                  <small className="field-error">{err("dogum_tarihi")}</small>
-                ) : null}
-              </label>
-              <label className="field">
-                <span>E-posta (isteğe bağlı)</span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => set("email", e.target.value)}
-                />
-              </label>
-            </>
-          )}
+          <label className="field">
+            <span>T.C. Kimlik No</span>
+            <input
+              inputMode="numeric"
+              maxLength={11}
+              value={form.tc_kimlik_no}
+              onChange={(e) => set("tc_kimlik_no", e.target.value.replace(/\D/g, ""))}
+              required
+            />
+            {err("tc_kimlik_no") ? (
+              <small className="field-error">{err("tc_kimlik_no")}</small>
+            ) : null}
+          </label>
+          <label className="field">
+            <span>Doğum tarihi</span>
+            <input
+              type="date"
+              value={form.dogum_tarihi}
+              onChange={(e) => set("dogum_tarihi", e.target.value)}
+              required
+            />
+            {err("dogum_tarihi") ? (
+              <small className="field-error">{err("dogum_tarihi")}</small>
+            ) : null}
+          </label>
+          <label className="field">
+            <span>{yontem === "eposta_sifre" ? "E-posta" : "E-posta (isteğe bağlı)"}</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+              required={yontem === "eposta_sifre"}
+            />
+            {err("email") ? <small className="field-error">{err("email")}</small> : null}
+          </label>
 
           <label className="field">
             <span>Telefon</span>
             <input
+              type="tel"
+              inputMode="tel"
               value={form.telefon}
               onChange={(e) => set("telefon", e.target.value)}
               placeholder="05xxxxxxxxx"
+              required
             />
+            {err("telefon") ? <small className="field-error">{err("telefon")}</small> : null}
           </label>
 
           <div className="field-row">
@@ -220,6 +251,9 @@ export function Register() {
                   required
                   autoComplete="new-password"
                 />
+                {err("password_confirmation") ? (
+                  <small className="field-error">{err("password_confirmation")}</small>
+                ) : null}
               </label>
             </>
           ) : null}

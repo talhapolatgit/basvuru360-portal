@@ -21,6 +21,7 @@ export function Login() {
   const [password, setPassword] = useState("");
   const [dogum, setDogum] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const description = useMemo(() => {
@@ -33,18 +34,42 @@ export function Login() {
     return "T.C. kimlik numaranız ve şifrenizle devam edin.";
   }, [yontem]);
 
+  function validate(): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    if (yontem === "eposta_sifre") {
+      if (email.trim() === "") errors.email = "E-posta adresi zorunludur.";
+    } else if (tc === "") {
+      errors.tc = "T.C. kimlik numarası zorunludur.";
+    } else if (tc.length !== 11) {
+      errors.tc = "T.C. kimlik numarası 11 haneli olmalıdır.";
+    }
+
+    if (yontem === "tc_dogum_tarihi") {
+      if (dogum.trim() === "") {
+        errors.dogum = "Doğum tarihi zorunludur.";
+      } else if (!dogumToIso(dogum)) {
+        errors.dogum = "Doğum tarihini GG.AA.YYYY formatında girin.";
+      }
+    } else if (password === "") {
+      errors.password = "Şifre zorunludur.";
+    }
+
+    return errors;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    let dogumIso: string | null = null;
-    if (yontem === "tc_dogum_tarihi") {
-      dogumIso = dogumToIso(dogum);
-      if (!dogumIso) {
-        setError("Doğum tarihini GG.AA.YYYY formatında girin.");
-        return;
-      }
+    const clientErrors = validate();
+    setFieldErrors(clientErrors);
+    if (Object.keys(clientErrors).length > 0) {
+      setError("Lütfen işaretli alanları kontrol edin.");
+      return;
     }
+
+    const dogumIso = yontem === "tc_dogum_tarihi" ? dogumToIso(dogum) : null;
 
     setSubmitting(true);
     try {
@@ -81,6 +106,7 @@ export function Login() {
                 autoComplete="username"
                 required
               />
+              {fieldErrors.email ? <small className="field-error">{fieldErrors.email}</small> : null}
             </label>
           ) : (
             <label className="field" htmlFor="login-tc">
@@ -96,6 +122,7 @@ export function Login() {
                 autoComplete="username"
                 required
               />
+              {fieldErrors.tc ? <small className="field-error">{fieldErrors.tc}</small> : null}
             </label>
           )}
 
@@ -113,6 +140,7 @@ export function Login() {
                 maxLength={10}
                 required
               />
+              {fieldErrors.dogum ? <small className="field-error">{fieldErrors.dogum}</small> : null}
             </label>
           ) : (
             <div className="field">
@@ -136,6 +164,9 @@ export function Login() {
                   {showPassword ? "Gizle" : "Göster"}
                 </button>
               </div>
+              {fieldErrors.password ? (
+                <small className="field-error">{fieldErrors.password}</small>
+              ) : null}
             </div>
           )}
 
