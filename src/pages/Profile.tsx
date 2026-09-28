@@ -5,6 +5,7 @@ import { useSettings } from "../auth/SettingsContext";
 import { updateProfil, updateSifre } from "../api/auth";
 import { ApiError } from "../api/client";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
+import { isoToDogumDisplay } from "../lib/format";
 import type { Kisi } from "../types";
 import "./Login.css";
 
@@ -136,7 +137,7 @@ export function Profile() {
           {kisi.dogum_tarihi ? (
             <label className="field">
               <span>Doğum tarihi</span>
-              <input value={kisi.dogum_tarihi} disabled />
+              <input value={isoToDogumDisplay(kisi.dogum_tarihi)} disabled />
             </label>
           ) : null}
 
