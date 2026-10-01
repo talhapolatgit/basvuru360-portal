@@ -159,7 +159,6 @@ export function Profile() {
               inputMode="numeric"
               autoComplete="tel-national"
               placeholder="05xxxxxxxxx"
-              maxLength={11}
               value={form.telefon}
               onChange={(e) =>
                 setForm({
