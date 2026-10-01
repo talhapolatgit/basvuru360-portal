@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
 import { ApiError } from "../api/client";
 import { registerKodYenile, type IkiAsamaliDogrulama } from "../api/auth";
+import { cepTelefonuGirdisi, gecerliCepTelefonu } from "../lib/format";
 import "./Login.css";
 
 export function Register() {
@@ -53,7 +54,11 @@ export function Register() {
 
     if (bos(form.ad)) ekle("ad", "Ad zorunludur.");
     if (bos(form.soyad)) ekle("soyad", "Soyad zorunludur.");
-    if (bos(form.telefon)) ekle("telefon", "Telefon zorunludur.");
+    if (bos(form.telefon)) {
+      ekle("telefon", "Telefon zorunludur.");
+    } else if (!gecerliCepTelefonu(form.telefon)) {
+      ekle("telefon", "Telefon 05XXXXXXXXX biçiminde, 11 haneli olmalıdır.");
+    }
 
     if (bos(form.tc_kimlik_no)) {
       ekle("tc_kimlik_no", "T.C. kimlik numarası zorunludur.");
@@ -218,10 +223,18 @@ export function Register() {
             <span>Telefon</span>
             <input
               type="tel"
-              inputMode="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={11}
+              placeholder="05XXXXXXXXX"
               value={form.telefon}
-              onChange={(e) => set("telefon", e.target.value)}
-              placeholder="05xxxxxxxxx"
+              onChange={(e) => {
+                set("telefon", cepTelefonuGirdisi(e.target.value));
+                if (fieldErrors.telefon) {
+                  setFieldErrors(({ telefon: _, ...rest }) => rest);
+                }
+              }}
+              aria-invalid={err("telefon") ? true : undefined}
               required
             />
             {err("telefon") ? <small className="field-error">{err("telefon")}</small> : null}
