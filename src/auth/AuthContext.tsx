@@ -10,8 +10,10 @@ import {
 import {
   fetchMe,
   login as apiLogin,
+  loginDogrula as apiLoginDogrula,
   logout as apiLogout,
   register as apiRegister,
+  type IkiAsamaliDogrulama,
 } from "../api/auth";
 import { clearTokens, getAccessToken } from "../api/client";
 import {
@@ -40,7 +42,9 @@ type AuthContextValue = {
   kisi: Kisi | null;
   loading: boolean;
   isAuthenticated: boolean;
-  login: (body: Record<string, string>) => Promise<void>;
+  /** 2 aşamalı doğrulama gerekiyorsa doğrulama bilgisini, aksi halde null döner. */
+  login: (body: Record<string, string>) => Promise<IkiAsamaliDogrulama | null>;
+  dogrula: (dogrulamaToken: string, kod: string) => Promise<void>;
   register: (body: Record<string, string>) => Promise<void>;
   logout: () => Promise<void>;
   refreshKisi: () => Promise<void>;
@@ -96,6 +100,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (body: Record<string, string>) => {
       const data = await apiLogin(body);
+      if ("iki_asamali" in data) return data;
+      setKisi(data.kisi);
+      return null;
+    },
+    [setKisi],
+  );
+
+  const dogrula = useCallback(
+    async (dogrulamaToken: string, kod: string) => {
+      const data = await apiLoginDogrula({ dogrulama_token: dogrulamaToken, kod });
       setKisi(data.kisi);
     },
     [setKisi],
@@ -120,12 +134,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       isAuthenticated: Boolean(kisi),
       login,
+      dogrula,
       register,
       logout,
       refreshKisi,
       setKisi,
     }),
-    [kisi, loading, login, register, logout, refreshKisi, setKisi],
+    [kisi, loading, login, dogrula, register, logout, refreshKisi, setKisi],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

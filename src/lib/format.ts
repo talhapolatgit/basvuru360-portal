@@ -41,6 +41,16 @@ export function isoToDogumDisplay(iso: string | null | undefined): string {
   return `${match[3]}.${match[2]}.${match[1]}`;
 }
 
+/** Boşluksuz cep telefonu girdisi: yalnızca rakam, 05XXXXXXXXX (en fazla 11 hane). */
+export function cepTelefonuGirdisi(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  return (digits.startsWith("5") ? `0${digits}` : digits).slice(0, 11);
+}
+
+export function gecerliCepTelefonu(value: string): boolean {
+  return /^05\d{9}$/.test(value);
+}
+
 /** 05xx xxx xx xx */
 export function formatCepTelefonu(raw: string): string {
   let digits = raw.replace(/\D/g, "").slice(0, 11);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { useBasvuruDogrulama } from "../components/BasvuruDogrulama";
 import { useAuth } from "../auth/AuthContext";
 import { usePortalPages } from "../auth/PortalPagesContext";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
@@ -52,6 +53,7 @@ function firstError(
 export function KresApply() {
   const { kisi, refreshKisi } = useAuth();
   const { paths } = usePortalPages();
+  const basvuruDogrulama = useBasvuruDogrulama();
   const sayfaMeta = usePortalSayfaMeta("kres-basvuru", {
     baslik: "Kreş Başvuru",
     aciklama: "Aktif dönem için veli ve öğrenci bilgileriyle kreş başvurusu yapın.",
@@ -357,7 +359,14 @@ export function KresApply() {
     }
 
     try {
-      await createKresBasvuru(fd);
+      const sonuc = await basvuruDogrulama.calistir((ek) => {
+        if (ek) {
+          fd.set("dogrulama_token", ek.dogrulama_token);
+          fd.set("dogrulama_kodu", ek.dogrulama_kodu);
+        }
+        return createKresBasvuru(fd);
+      });
+      if (!sonuc) return;
       try {
         await refreshKisi();
       } catch {
@@ -774,6 +783,7 @@ export function KresApply() {
           </Link>
         </div>
       ) : null}
+      {basvuruDogrulama.modal}
     </div>
   );
 }

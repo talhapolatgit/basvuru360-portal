@@ -10,13 +10,48 @@ export async function fetchGenelAyarlar(): Promise<GenelAyarlar> {
   return apiRequest<GenelAyarlar>("/genel-ayarlar");
 }
 
-export async function login(body: Record<string, string>): Promise<AuthResult> {
-  const data = await apiRequest<AuthResult>("/auth/login", {
+export type DogrulamaHedefi = { kanal: "sms" | "eposta"; hedef: string };
+
+export type IkiAsamaliBilgi = {
+  hedefler: DogrulamaHedefi[];
+  ttl_dakika: number;
+  yeniden_gonderim_saniye: number;
+};
+
+export type IkiAsamaliDogrulama = IkiAsamaliBilgi & {
+  iki_asamali: true;
+  dogrulama_token: string;
+};
+
+export async function login(
+  body: Record<string, string>,
+): Promise<AuthResult | IkiAsamaliDogrulama> {
+  const data = await apiRequest<AuthResult | IkiAsamaliDogrulama>("/auth/login", {
+    method: "POST",
+    body,
+  });
+  if ("iki_asamali" in data) return data;
+  setTokens(data.access_token, data.refresh_token);
+  return data;
+}
+
+export async function loginDogrula(body: {
+  dogrulama_token: string;
+  kod: string;
+}): Promise<AuthResult> {
+  const data = await apiRequest<AuthResult>("/auth/login/dogrulama", {
     method: "POST",
     body,
   });
   setTokens(data.access_token, data.refresh_token);
   return data;
+}
+
+export async function loginKodYenile(dogrulama_token: string): Promise<IkiAsamaliBilgi> {
+  return apiRequest<IkiAsamaliBilgi>("/auth/login/dogrulama/yenile", {
+    method: "POST",
+    body: { dogrulama_token },
+  });
 }
 
 export async function register(body: Record<string, string>): Promise<AuthResult> {

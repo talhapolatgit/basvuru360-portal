@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DetailLayout } from "../components/DetailBackLink";
+import { useBasvuruDogrulama } from "../components/BasvuruDogrulama";
 import { ScrollSelect } from "../components/ScrollSelect";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
@@ -58,6 +59,7 @@ export function ApplyForm({ kind }: { kind: Kind }) {
   const { id } = useParams();
   const { kisi, setKisi, refreshKisi } = useAuth();
   const { ayarlar } = useSettings();
+  const basvuruDogrulama = useBasvuruDogrulama();
   const { paths } = usePortalPages();
   const navigate = useNavigate();
   const kimlikAktif = Boolean(ayarlar.kimlik_sorgulama_aktif);
@@ -415,10 +417,17 @@ export function ApplyForm({ kind }: { kind: Kind }) {
         }
       }
 
-      const result =
-        kind === "kurs"
-          ? await createKursBasvuru(fd)
-          : await createEtkinlikBasvuru(fd);
+      const result = await basvuruDogrulama.calistir((ek) => {
+        if (ek) {
+          fd.set("dogrulama_token", ek.dogrulama_token);
+          fd.set("dogrulama_kodu", ek.dogrulama_kodu);
+        }
+        return kind === "kurs" ? createKursBasvuru(fd) : createEtkinlikBasvuru(fd);
+      });
+      if (!result) {
+        setSubmitting(false);
+        return;
+      }
 
       if (result.kisi) {
         setKisi(result.kisi);
@@ -1199,6 +1208,7 @@ export function ApplyForm({ kind }: { kind: Kind }) {
             document.body,
           )
         : null}
+      {basvuruDogrulama.modal}
     </DetailLayout>
   );
 }

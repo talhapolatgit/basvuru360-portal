@@ -5,7 +5,11 @@ import { useSettings } from "../auth/SettingsContext";
 import { updateProfil, updateSifre } from "../api/auth";
 import { ApiError } from "../api/client";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
-import { isoToDogumDisplay } from "../lib/format";
+import {
+  cepTelefonuGirdisi,
+  gecerliCepTelefonu,
+  isoToDogumDisplay,
+} from "../lib/format";
 import type { Kisi } from "../types";
 import "./Login.css";
 
@@ -41,10 +45,11 @@ export function Profile() {
     ayarlar?.kisi_giris_yontemi.kod !== "tc_dogum_tarihi";
 
   const [form, setForm] = useState({
-    telefon: kisi?.telefon ?? "",
+    telefon: cepTelefonuGirdisi(kisi?.telefon ?? ""),
     email: kisi?.email ?? "",
     diger_adres: kisi?.diger_adres ?? "",
   });
+  const [telefonHata, setTelefonHata] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -69,16 +74,25 @@ export function Profile() {
     e.preventDefault();
     setMsg(null);
     setError(null);
+    if (!gecerliCepTelefonu(form.telefon)) {
+      setTelefonHata(
+        form.telefon
+          ? "Telefon 05XXXXXXXXX biçiminde, 11 haneli olmalıdır."
+          : "Telefon zorunludur.",
+      );
+      return;
+    }
+    setTelefonHata(null);
     setSaving(true);
     try {
       const updated = await updateProfil({
-        telefon: form.telefon.trim(),
+        telefon: form.telefon,
         email: form.email.trim() || null,
         diger_adres: form.diger_adres.trim() || null,
       });
       setKisi(updated);
       setForm({
-        telefon: updated.telefon ?? "",
+        telefon: cepTelefonuGirdisi(updated.telefon ?? ""),
         email: updated.email ?? "",
         diger_adres: updated.diger_adres ?? "",
       });
@@ -144,10 +158,22 @@ export function Profile() {
           <label className="field">
             <span>Telefon *</span>
             <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={11}
+              placeholder="05XXXXXXXXX"
               value={form.telefon}
-              onChange={(e) => setForm({ ...form, telefon: e.target.value })}
+              onChange={(e) => {
+                setForm({ ...form, telefon: cepTelefonuGirdisi(e.target.value) });
+                if (telefonHata) setTelefonHata(null);
+              }}
+              aria-invalid={telefonHata ? true : undefined}
               required
             />
+            {telefonHata ? (
+              <small className="field-error">{telefonHata}</small>
+            ) : null}
           </label>
           <label className="field">
             <span>E-posta</span>

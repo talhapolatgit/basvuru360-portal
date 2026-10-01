@@ -1,4 +1,5 @@
 import { apiDownload, apiRequest } from "./client";
+import type { IkiAsamaliBilgi } from "./auth";
 import type {
   BasvuruItem,
   Kisi,
@@ -22,6 +23,24 @@ export type BasvuruCreateSonuc = {
   yedek_sira: number | null;
   kisi?: Kisi;
 };
+
+export type BasvuruDogrulamaOturumu = IkiAsamaliBilgi & { dogrulama_token: string };
+
+export async function basvuruDogrulamaKoduGonder() {
+  return apiRequest<BasvuruDogrulamaOturumu>("/basvuru-dogrulama/kod", {
+    method: "POST",
+    auth: true,
+    body: {},
+  });
+}
+
+export async function basvuruDogrulamaKoduYenile(dogrulama_token: string) {
+  return apiRequest<IkiAsamaliBilgi>("/basvuru-dogrulama/kod/yenile", {
+    method: "POST",
+    auth: true,
+    body: { dogrulama_token },
+  });
+}
 
 export async function createKursBasvuru(formData: FormData) {
   return apiRequest<BasvuruCreateSonuc>("/kurs-basvurulari", {
