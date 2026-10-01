@@ -54,13 +54,35 @@ export async function loginKodYenile(dogrulama_token: string): Promise<IkiAsamal
   });
 }
 
-export async function register(body: Record<string, string>): Promise<AuthResult> {
-  const data = await apiRequest<AuthResult>("/auth/register", {
+export async function register(
+  body: Record<string, string>,
+): Promise<AuthResult | IkiAsamaliDogrulama> {
+  const data = await apiRequest<AuthResult | IkiAsamaliDogrulama>("/auth/register", {
+    method: "POST",
+    body,
+  });
+  if ("iki_asamali" in data) return data;
+  setTokens(data.access_token, data.refresh_token);
+  return data;
+}
+
+export async function registerDogrula(body: {
+  dogrulama_token: string;
+  kod: string;
+}): Promise<AuthResult> {
+  const data = await apiRequest<AuthResult>("/auth/register/dogrulama", {
     method: "POST",
     body,
   });
   setTokens(data.access_token, data.refresh_token);
   return data;
+}
+
+export async function registerKodYenile(dogrulama_token: string): Promise<IkiAsamaliBilgi> {
+  return apiRequest<IkiAsamaliBilgi>("/auth/register/dogrulama/yenile", {
+    method: "POST",
+    body: { dogrulama_token },
+  });
 }
 
 export async function fetchMe(): Promise<Kisi> {

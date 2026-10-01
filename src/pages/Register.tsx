@@ -1,13 +1,15 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { DogrulamaKoduAdimi } from "../components/DogrulamaKoduAdimi";
 import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
 import { ApiError } from "../api/client";
+import { registerKodYenile, type IkiAsamaliDogrulama } from "../api/auth";
 import "./Login.css";
 
 export function Register() {
-  const { register } = useAuth();
+  const { register, kayitDogrula } = useAuth();
   const { ayarlar } = useSettings();
   const navigate = useNavigate();
   const yontem = ayarlar?.kisi_giris_yontemi.kod ?? "tc_sifre";
@@ -29,6 +31,7 @@ export function Register() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [dogrulama, setDogrulama] = useState<IkiAsamaliDogrulama | null>(null);
 
   const needsPassword = yontem === "tc_sifre" || yontem === "eposta_sifre";
 
@@ -113,7 +116,11 @@ export function Register() {
         }
       }
 
-      await register(body);
+      const challenge = await register(body);
+      if (challenge) {
+        setDogrulama(challenge);
+        return;
+      }
       navigate("/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -129,6 +136,27 @@ export function Register() {
 
   function err(name: string) {
     return fieldErrors[name]?.[0];
+  }
+
+  if (dogrulama) {
+    return (
+      <DogrulamaKoduAdimi
+        dogrulama={dogrulama}
+        aciklama="Üyeliğinizi tamamlamak için size gönderilen 6 haneli kodu girin."
+        onayEtiketi="Doğrula ve kaydı tamamla"
+        geriEtiketi="Kayıt formuna dön"
+        oturumBittiMetni="kayıt formunu tekrar gönderin"
+        onDogrula={async (kod) => {
+          await kayitDogrula(dogrulama.dogrulama_token, kod);
+          navigate("/", { replace: true });
+        }}
+        onYenile={() => registerKodYenile(dogrulama.dogrulama_token)}
+        onGeri={(hata) => {
+          setDogrulama(null);
+          setError(hata ?? null);
+        }}
+      />
+    );
   }
 
   return (

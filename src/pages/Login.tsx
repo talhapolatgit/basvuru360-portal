@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
+import { DogrulamaKoduAdimi } from "../components/DogrulamaKoduAdimi";
 import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
 import { ApiError } from "../api/client";
 import { loginKodYenile, type IkiAsamaliDogrulama } from "../api/auth";
 import { dogumToIso, formatDogumInput } from "../lib/format";
 import "./Login.css";
-
-const KANAL_LABEL = { sms: "SMS", eposta: "E-posta" } as const;
 
 export function Login() {
   const { login, dogrula } = useAuth();
@@ -27,16 +26,6 @@ export function Login() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [dogrulama, setDogrulama] = useState<IkiAsamaliDogrulama | null>(null);
-  const [kod, setKod] = useState("");
-  const [bilgi, setBilgi] = useState<string | null>(null);
-  const [beklemeSaniye, setBeklemeSaniye] = useState(0);
-  const [yenileniyor, setYenileniyor] = useState(false);
-
-  useEffect(() => {
-    if (beklemeSaniye <= 0) return;
-    const timer = window.setTimeout(() => setBeklemeSaniye((s) => s - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [beklemeSaniye]);
 
   const description = useMemo(() => {
     if (yontem === "tc_dogum_tarihi") {
@@ -96,9 +85,6 @@ export function Login() {
       const challenge = await login(body);
       if (challenge) {
         setDogrulama(challenge);
-        setKod("");
-        setBilgi(null);
-        setBeklemeSaniye(challenge.yeniden_gonderim_saniye);
         return;
       }
       navigate(next, { replace: true });
@@ -109,135 +95,25 @@ export function Login() {
     }
   }
 
-  function dogrulamadanCik() {
-    setDogrulama(null);
-    setKod("");
-    setError(null);
-    setBilgi(null);
-    setFieldErrors({});
-  }
-
-  async function handleDogrula(e: FormEvent) {
-    e.preventDefault();
-    if (!dogrulama) return;
-    setError(null);
-    setBilgi(null);
-
-    if (!/^\d{6}$/.test(kod)) {
-      setFieldErrors({ kod: "6 haneli doğrulama kodunu girin." });
-      return;
-    }
-    setFieldErrors({});
-
-    setSubmitting(true);
-    try {
-      await dogrula(dogrulama.dogrulama_token, kod);
-      navigate(next, { replace: true });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Doğrulama yapılamadı.";
-      setError(message);
-      setKod("");
-      if (/tekrar giriş yapın/i.test(message)) {
-        setDogrulama(null);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleKodYenile() {
-    if (!dogrulama || beklemeSaniye > 0 || yenileniyor) return;
-    setError(null);
-    setBilgi(null);
-    setYenileniyor(true);
-    try {
-      const sonuc = await loginKodYenile(dogrulama.dogrulama_token);
-      setDogrulama({ ...dogrulama, ...sonuc });
-      setBeklemeSaniye(sonuc.yeniden_gonderim_saniye);
-      setKod("");
-      setBilgi("Yeni doğrulama kodu gönderildi.");
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Kod gönderilemedi.";
-      setError(message);
-      const kalan = message.match(/(\d+) saniye/);
-      if (kalan) setBeklemeSaniye(Number(kalan[1]));
-      if (/tekrar giriş yapın/i.test(message)) setDogrulama(null);
-    } finally {
-      setYenileniyor(false);
-    }
-  }
-
   if (dogrulama) {
     return (
-      <div className="page page--narrow login page-enter">
-        <PageHeader
-          title="Doğrulama kodu"
-          description="Girişi tamamlamak için size gönderilen 6 haneli kodu girin."
-        />
-
-        <div className="login__panel">
-          <form className="login__form" onSubmit={handleDogrula} noValidate>
-            <ul className="login__hedefler">
-              {dogrulama.hedefler.map((h) => (
-                <li key={h.kanal}>
-                  <strong>{KANAL_LABEL[h.kanal]}</strong>
-                  <span>{h.hedef}</span>
-                </li>
-              ))}
-            </ul>
-
-            <label className="field" htmlFor="login-kod">
-              <span>Doğrulama kodu</span>
-              <input
-                id="login-kod"
-                className="login__kod"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                value={kod}
-                onChange={(e) => setKod(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="••••••"
-                autoFocus
-                required
-              />
-              {fieldErrors.kod ? <small className="field-error">{fieldErrors.kod}</small> : null}
-            </label>
-
-            <p className="login__hint">Kod {dogrulama.ttl_dakika} dakika geçerlidir.</p>
-
-            {error ? <p className="form-error">{error}</p> : null}
-            {bilgi ? <p className="form-success">{bilgi}</p> : null}
-
-            <button
-              type="submit"
-              className="btn btn--primary btn--block"
-              disabled={submitting}
-            >
-              {submitting ? "Doğrulanıyor…" : "Doğrula ve giriş yap"}
-            </button>
-
-            <button
-              type="button"
-              className="btn btn--ghost btn--block"
-              onClick={handleKodYenile}
-              disabled={beklemeSaniye > 0 || yenileniyor}
-            >
-              {yenileniyor
-                ? "Gönderiliyor…"
-                : beklemeSaniye > 0
-                  ? `Kodu tekrar gönder (${beklemeSaniye} sn)`
-                  : "Kodu tekrar gönder"}
-            </button>
-
-            <p className="login__hint">
-              <button type="button" className="login__link" onClick={dogrulamadanCik}>
-                Giriş ekranına dön
-              </button>
-            </p>
-          </form>
-        </div>
-      </div>
+      <DogrulamaKoduAdimi
+        dogrulama={dogrulama}
+        aciklama="Girişi tamamlamak için size gönderilen 6 haneli kodu girin."
+        onayEtiketi="Doğrula ve giriş yap"
+        geriEtiketi="Giriş ekranına dön"
+        oturumBittiMetni="tekrar giriş yapın"
+        onDogrula={async (kod) => {
+          await dogrula(dogrulama.dogrulama_token, kod);
+          navigate(next, { replace: true });
+        }}
+        onYenile={() => loginKodYenile(dogrulama.dogrulama_token)}
+        onGeri={(hata) => {
+          setDogrulama(null);
+          setFieldErrors({});
+          setError(hata ?? null);
+        }}
+      />
     );
   }
 

@@ -13,6 +13,7 @@ import {
   loginDogrula as apiLoginDogrula,
   logout as apiLogout,
   register as apiRegister,
+  registerDogrula as apiRegisterDogrula,
   type IkiAsamaliDogrulama,
 } from "../api/auth";
 import { clearTokens, getAccessToken } from "../api/client";
@@ -45,7 +46,9 @@ type AuthContextValue = {
   /** 2 aşamalı doğrulama gerekiyorsa doğrulama bilgisini, aksi halde null döner. */
   login: (body: Record<string, string>) => Promise<IkiAsamaliDogrulama | null>;
   dogrula: (dogrulamaToken: string, kod: string) => Promise<void>;
-  register: (body: Record<string, string>) => Promise<void>;
+  /** Doğrulama kodu gerekiyorsa doğrulama bilgisini, aksi halde null döner. */
+  register: (body: Record<string, string>) => Promise<IkiAsamaliDogrulama | null>;
+  kayitDogrula: (dogrulamaToken: string, kod: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshKisi: () => Promise<void>;
   setKisi: (kisi: Kisi | null) => void;
@@ -118,6 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (body: Record<string, string>) => {
       const data = await apiRegister(body);
+      if ("iki_asamali" in data) return data;
+      setKisi(data.kisi);
+      return null;
+    },
+    [setKisi],
+  );
+
+  const kayitDogrula = useCallback(
+    async (dogrulamaToken: string, kod: string) => {
+      const data = await apiRegisterDogrula({ dogrulama_token: dogrulamaToken, kod });
       setKisi(data.kisi);
     },
     [setKisi],
@@ -136,11 +149,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       dogrula,
       register,
+      kayitDogrula,
       logout,
       refreshKisi,
       setKisi,
     }),
-    [kisi, loading, login, dogrula, register, logout, refreshKisi, setKisi],
+    [kisi, loading, login, dogrula, register, kayitDogrula, logout, refreshKisi, setKisi],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
