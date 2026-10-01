@@ -41,13 +41,22 @@ export function isoToDogumDisplay(iso: string | null | undefined): string {
   return `${match[3]}.${match[2]}.${match[1]}`;
 }
 
-/** 05xx xxx xx xx */
-export function formatCepTelefonu(raw: string): string {
+/** 05xxxxxxxxx — yalnızca rakam, boşluksuz cep telefonu. */
+export function normalizeCepTelefonu(raw: string): string {
   let digits = raw.replace(/\D/g, "").slice(0, 11);
   if (digits.length === 10 && digits.startsWith("5")) {
     digits = `0${digits}`;
   }
-  digits = digits.slice(0, 11);
+  return digits.slice(0, 11);
+}
+
+export function isCepTelefonu(raw: string): boolean {
+  return /^05\d{9}$/.test(normalizeCepTelefonu(raw));
+}
+
+/** 05xx xxx xx xx */
+export function formatCepTelefonu(raw: string): string {
+  const digits = normalizeCepTelefonu(raw);
   if (digits.length <= 4) return digits;
   if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
   if (digits.length <= 9) {

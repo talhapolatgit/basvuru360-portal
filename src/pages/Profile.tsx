@@ -5,7 +5,11 @@ import { useSettings } from "../auth/SettingsContext";
 import { updateProfil, updateSifre } from "../api/auth";
 import { ApiError } from "../api/client";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
-import { isoToDogumDisplay } from "../lib/format";
+import {
+  isoToDogumDisplay,
+  isCepTelefonu,
+  normalizeCepTelefonu,
+} from "../lib/format";
 import type { Kisi } from "../types";
 import "./Login.css";
 
@@ -41,7 +45,7 @@ export function Profile() {
     ayarlar?.kisi_giris_yontemi.kod !== "tc_dogum_tarihi";
 
   const [form, setForm] = useState({
-    telefon: kisi?.telefon ?? "",
+    telefon: normalizeCepTelefonu(kisi?.telefon ?? ""),
     email: kisi?.email ?? "",
     diger_adres: kisi?.diger_adres ?? "",
   });
@@ -69,16 +73,23 @@ export function Profile() {
     e.preventDefault();
     setMsg(null);
     setError(null);
+
+    const telefon = normalizeCepTelefonu(form.telefon);
+    if (!isCepTelefonu(telefon)) {
+      setError("Cep telefonunu 05xxxxxxxxx formatında girin.");
+      return;
+    }
+
     setSaving(true);
     try {
       const updated = await updateProfil({
-        telefon: form.telefon.trim(),
+        telefon,
         email: form.email.trim() || null,
         diger_adres: form.diger_adres.trim() || null,
       });
       setKisi(updated);
       setForm({
-        telefon: updated.telefon ?? "",
+        telefon: normalizeCepTelefonu(updated.telefon ?? ""),
         email: updated.email ?? "",
         diger_adres: updated.diger_adres ?? "",
       });
@@ -144,8 +155,18 @@ export function Profile() {
           <label className="field">
             <span>Telefon *</span>
             <input
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="05xxxxxxxxx"
+              maxLength={11}
               value={form.telefon}
-              onChange={(e) => setForm({ ...form, telefon: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  telefon: normalizeCepTelefonu(e.target.value),
+                })
+              }
               required
             />
           </label>
