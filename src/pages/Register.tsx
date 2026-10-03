@@ -14,6 +14,8 @@ export function Register() {
   const { ayarlar } = useSettings();
   const navigate = useNavigate();
   const yontem = ayarlar?.kisi_giris_yontemi.kod ?? "tc_sifre";
+  const kimlikAktif = Boolean(ayarlar?.kimlik_sorgulama_aktif);
+  const adresAktif = Boolean(ayarlar?.adres_sorgulama_aktif);
 
   const [form, setForm] = useState({
     ad: "",
@@ -103,11 +105,13 @@ export function Register() {
         telefon: form.telefon,
         tc_kimlik_no: form.tc_kimlik_no,
         dogum_tarihi: form.dogum_tarihi,
-        il: form.il,
-        ilce: form.ilce,
-        adres: form.adres,
       };
-      if (form.cinsiyet) body.cinsiyet = form.cinsiyet;
+      if (!adresAktif) {
+        body.il = form.il;
+        body.ilce = form.ilce;
+        body.adres = form.adres;
+      }
+      if (form.cinsiyet && !kimlikAktif) body.cinsiyet = form.cinsiyet;
 
       if (yontem === "eposta_sifre") {
         body.email = form.email;
@@ -240,33 +244,39 @@ export function Register() {
             {err("telefon") ? <small className="field-error">{err("telefon")}</small> : null}
           </label>
 
-          <div className="field-row">
-            <label className="field">
-              <span>İl</span>
-              <input value={form.il} onChange={(e) => set("il", e.target.value)} />
-            </label>
-            <label className="field">
-              <span>İlçe</span>
-              <input value={form.ilce} onChange={(e) => set("ilce", e.target.value)} />
-            </label>
-          </div>
+          {!adresAktif ? (
+            <>
+              <div className="field-row">
+                <label className="field">
+                  <span>İl</span>
+                  <input value={form.il} onChange={(e) => set("il", e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>İlçe</span>
+                  <input value={form.ilce} onChange={(e) => set("ilce", e.target.value)} />
+                </label>
+              </div>
 
-          <label className="field">
-            <span>Adres</span>
-            <input value={form.adres} onChange={(e) => set("adres", e.target.value)} />
-          </label>
+              <label className="field">
+                <span>Adres</span>
+                <input value={form.adres} onChange={(e) => set("adres", e.target.value)} />
+              </label>
+            </>
+          ) : null}
 
-          <label className="field">
-            <span>Cinsiyet</span>
-            <select
-              value={form.cinsiyet}
-              onChange={(e) => set("cinsiyet", e.target.value)}
-            >
-              <option value="">Seçiniz</option>
-              <option value="kadin">Kadın</option>
-              <option value="erkek">Erkek</option>
-            </select>
-          </label>
+          {!kimlikAktif ? (
+            <label className="field">
+              <span>Cinsiyet</span>
+              <select
+                value={form.cinsiyet}
+                onChange={(e) => set("cinsiyet", e.target.value)}
+              >
+                <option value="">Seçiniz</option>
+                <option value="kadin">Kadın</option>
+                <option value="erkek">Erkek</option>
+              </select>
+            </label>
+          ) : null}
 
           {needsPassword ? (
             <>

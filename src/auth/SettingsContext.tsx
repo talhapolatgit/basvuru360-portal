@@ -39,6 +39,7 @@ const fallback: GenelAyarlar = {
   yakin_icin_basvuru_aktif: true,
   manuel_yakin_ekleme_aktif: true,
   kimlik_sorgulama_aktif: false,
+  adres_sorgulama_aktif: false,
 };
 
 type SettingsContextValue = {

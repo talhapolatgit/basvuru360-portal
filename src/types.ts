@@ -49,6 +49,7 @@ export type GenelAyarlar = {
   yakin_icin_basvuru_aktif?: boolean;
   manuel_yakin_ekleme_aktif?: boolean;
   kimlik_sorgulama_aktif?: boolean;
+  adres_sorgulama_aktif?: boolean;
   basvuru_dogrulama_aktif?: boolean;
 };
 
