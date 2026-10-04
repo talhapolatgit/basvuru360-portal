@@ -112,6 +112,7 @@ export type KursApi = {
   evrak_zorunlu: boolean;
   evrak_tipleri: EvrakTipi[];
   basvuru_onaylari?: BasvuruOnay[];
+  soru_formu?: BasvuruSoruFormu | null;
   aciklama?: string | null;
   haftalik_program?: Array<{
     gun: number | null;
@@ -152,6 +153,7 @@ export type EtkinlikApi = {
   evrak_zorunlu: boolean;
   evrak_tipleri: EvrakTipi[];
   basvuru_onaylari?: BasvuruOnay[];
+  soru_formu?: BasvuruSoruFormu | null;
 };
 
 /** UI kart/detay için sadeleştirilmiş kurs modeli */
@@ -172,6 +174,7 @@ export type Kurs = {
   evrak_zorunlu: boolean;
   evrak_tipleri: EvrakTipi[];
   basvuru_onaylari: BasvuruOnay[];
+  soru_formu: BasvuruSoruFormu | null;
   toplam_saat: number;
   kurs_tipi: string;
   minimum_yas: number | null;
@@ -203,6 +206,7 @@ export type Etkinlik = {
   evrak_zorunlu: boolean;
   evrak_tipleri: EvrakTipi[];
   basvuru_onaylari: BasvuruOnay[];
+  soru_formu: BasvuruSoruFormu | null;
   aciklama: string;
   minimum_yas: number | null;
   maksimum_yas: number | null;
@@ -212,7 +216,7 @@ export type Etkinlik = {
   ikamet_sarti_label: string | null;
 };
 
-export type KresSoruTipi =
+export type BasvuruSoruTipi =
   | "metin"
   | "uzun_metin"
   | "sayi"
@@ -257,14 +261,14 @@ export type KresGrupSecim = {
   kesin_kayit: number;
 };
 
-export type KresSoruSecenek = {
+export type BasvuruSoruSecenek = {
   id: number;
   etiket: string;
 };
 
-export type KresSoru = {
+export type BasvuruSoru = {
   id: number;
-  tip: KresSoruTipi;
+  tip: BasvuruSoruTipi;
   baslik: string;
   aciklama: string | null;
   zorunlu: boolean;
@@ -272,12 +276,22 @@ export type KresSoru = {
   min_deger: number | null;
   max_deger: number | null;
   tam_sayi: boolean | null;
-  secenekler: KresSoruSecenek[];
+  /** Bu soru yalnızca kosul_soru_id sorusunda kosul_secenek_ids'ten biri seçilince gösterilir. */
+  kosul_soru_id: number | null;
+  kosul_secenek_ids: number[] | null;
+  secenekler: BasvuruSoruSecenek[];
+};
+
+export type BasvuruSoruFormu = {
+  id: number;
+  ad: string;
+  aciklama: string | null;
+  sorular: BasvuruSoru[];
 };
 
 export type KresSoruFormuPayload = {
   form: { id: number; ad: string; aciklama: string | null } | null;
-  sorular: KresSoru[];
+  sorular: BasvuruSoru[];
 };
 
 export type BasvuruItem = {
@@ -355,4 +369,6 @@ export type PortalSayfa = {
   sadece_giris: boolean;
   has_kurs: boolean;
   has_etkinlik: boolean;
+  /** İçerik kuralları tek bir kurs/etkinliği gösteriyorsa liste yerine detay açılır. */
+  tek_icerik?: { tip: "kurs" | "etkinlik"; id: number } | null;
 };

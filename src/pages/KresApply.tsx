@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "../components/PageHeader";
 import { useBasvuruDogrulama } from "../components/BasvuruDogrulama";
+import {
+  ilkSoruHatasinaKaydir,
+  SoruFormuAlanlari,
+  useSoruFormu,
+} from "../components/SoruFormu";
 import { useAuth } from "../auth/AuthContext";
 import { usePortalPages } from "../auth/PortalPagesContext";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
@@ -23,7 +28,6 @@ import type {
   KresBasvuruDurum,
   KresGrupSecim,
   KresOkulSecim,
-  KresSoru,
   KresSoruFormuPayload,
 } from "../types";
 import "./Login.css";
@@ -88,9 +92,8 @@ export function KresApply() {
   const [selectedOkulAd, setSelectedOkulAd] = useState<string | null>(null);
   const [selectedGrupId, setSelectedGrupId] = useState<number | null>(null);
   const [soruFormu, setSoruFormu] = useState<KresSoruFormuPayload | null>(null);
-  const [cevaplar, setCevaplar] = useState<Record<number, string | number[]>>({});
-  const [dosyalar, setDosyalar] = useState<Record<number, File | null>>({});
-  const [checkboxUyari, setCheckboxUyari] = useState<Record<number, string>>({});
+  const sorular = useMemo(() => soruFormu?.sorular ?? [], [soruFormu]);
+  const soruKontrol = useSoruFormu(sorular);
 
   useEffect(() => {
     let cancelled = false;
@@ -262,56 +265,13 @@ export function KresApply() {
     try {
       const data = await fetchKresSoruFormu();
       setSoruFormu(data);
-      setCevaplar({});
-      setDosyalar({});
-      setCheckboxUyari({});
+      soruKontrol.sifirla();
       setStep("sorular");
     } catch (err) {
       showApiError(err, "Soru formu yüklenemedi.");
     } finally {
       setBusy(false);
     }
-  }
-
-  function setCevap(soruId: number, value: string) {
-    setCevaplar((prev) => ({ ...prev, [soruId]: value }));
-  }
-
-  function toggleCheckbox(soru: KresSoru, optionId: number) {
-    const current = Array.isArray(cevaplar[soru.id])
-      ? ([...(cevaplar[soru.id] as number[])] as number[])
-      : [];
-    const has = current.includes(optionId);
-    if (has) {
-      const next = current.filter((id) => id !== optionId);
-      if (soru.min_deger != null && next.length < soru.min_deger) {
-        setCheckboxUyari((prev) => ({
-          ...prev,
-          [soru.id]: `En az ${soru.min_deger} seçim yapın.`,
-        }));
-      } else {
-        setCheckboxUyari((prev) => {
-          const copy = { ...prev };
-          delete copy[soru.id];
-          return copy;
-        });
-      }
-      setCevaplar((prev) => ({ ...prev, [soru.id]: next }));
-      return;
-    }
-    if (soru.max_deger != null && current.length >= soru.max_deger) {
-      setCheckboxUyari((prev) => ({
-        ...prev,
-        [soru.id]: `En fazla ${soru.max_deger} seçim yapabilirsiniz.`,
-      }));
-      return;
-    }
-    setCheckboxUyari((prev) => {
-      const copy = { ...prev };
-      delete copy[soru.id];
-      return copy;
-    });
-    setCevaplar((prev) => ({ ...prev, [soru.id]: [...current, optionId] }));
   }
 
   function appendKisiler(fd: FormData) {
@@ -336,27 +296,17 @@ export function KresApply() {
       setError("Grup seçimi eksik.");
       return;
     }
+    const soruHatalari = soruKontrol.dogrula();
+    if (Object.keys(soruHatalari).length > 0) {
+      setFieldErrors(soruHatalari);
+      setError("Eksik veya hatalı cevapları düzeltin.");
+      ilkSoruHatasinaKaydir();
+      return;
+    }
     setBusy(true);
     const fd = new FormData();
     appendKisiler(fd);
-    for (const soru of soruFormu?.sorular ?? []) {
-      if (soru.tip === "dosya" || soru.tip === "resim") {
-        const file = dosyalar[soru.id];
-        if (file) fd.append(`cevaplar[${soru.id}]`, file);
-        continue;
-      }
-      if (soru.tip === "checkbox") {
-        const ids = Array.isArray(cevaplar[soru.id])
-          ? (cevaplar[soru.id] as number[])
-          : [];
-        for (const id of ids) {
-          fd.append(`cevaplar[${soru.id}][]`, String(id));
-        }
-        continue;
-      }
-      const value = String(cevaplar[soru.id] ?? "").trim();
-      if (value) fd.append(`cevaplar[${soru.id}]`, value);
-    }
+    soruKontrol.formDatayaEkle(fd);
 
     try {
       const sonuc = await basvuruDogrulama.calistir((ek) => {
@@ -732,29 +682,16 @@ export function KresApply() {
             {soruFormu?.form?.aciklama ? (
               <p className="kres-apply__hint">{soruFormu.form.aciklama}</p>
             ) : null}
-            {(soruFormu?.sorular ?? []).length === 0 ? (
+            {sorular.length === 0 ? (
               <p className="kres-apply__hint">
                 Bu dönem için ek soru yok. Başvuruyu tamamlayabilirsiniz.
               </p>
             ) : (
-              soruFormu?.sorular.map((soru) => (
-                <SoruAlani
-                  key={soru.id}
-                  soru={soru}
-                  value={cevaplar[soru.id]}
-                  file={dosyalar[soru.id] ?? null}
-                  uyari={checkboxUyari[soru.id]}
-                  fieldError={
-                    firstError(fieldErrors, `cevaplar.${soru.id}`) ||
-                    firstError(fieldErrors, `cevaplar.${soru.id}.0`)
-                  }
-                  onChange={(value) => setCevap(soru.id, value)}
-                  onFile={(file) =>
-                    setDosyalar((prev) => ({ ...prev, [soru.id]: file }))
-                  }
-                  onToggle={(optionId) => toggleCheckbox(soru, optionId)}
-                />
-              ))
+              <SoruFormuAlanlari
+                sorular={sorular}
+                kontrol={soruKontrol}
+                fieldErrors={fieldErrors}
+              />
             )}
           </fieldset>
           <div className="kres-apply__actions">
@@ -784,146 +721,6 @@ export function KresApply() {
         </div>
       ) : null}
       {basvuruDogrulama.modal}
-    </div>
-  );
-}
-
-function SoruAlani({
-  soru,
-  value,
-  file,
-  uyari,
-  fieldError,
-  onChange,
-  onFile,
-  onToggle,
-}: {
-  soru: KresSoru;
-  value: string | number[] | undefined;
-  file: File | null;
-  uyari?: string;
-  fieldError?: string;
-  onChange: (value: string) => void;
-  onFile: (file: File | null) => void;
-  onToggle: (optionId: number) => void;
-}) {
-  const text = typeof value === "string" ? value : "";
-  const selected = Array.isArray(value) ? value : [];
-
-  return (
-    <div className="field">
-      <span>
-        {soru.baslik}
-        {soru.zorunlu ? " *" : ""}
-      </span>
-      {soru.aciklama ? <em className="kres-apply__soru-desc">{soru.aciklama}</em> : null}
-
-      {soru.tip === "uzun_metin" ? (
-        <textarea
-          rows={4}
-          placeholder={soru.placeholder ?? ""}
-          value={text}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : null}
-
-      {soru.tip === "metin" || soru.tip === "eposta" ? (
-        <input
-          type={soru.tip === "eposta" ? "email" : "text"}
-          placeholder={soru.placeholder ?? ""}
-          value={text}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : null}
-
-      {soru.tip === "sayi" ? (
-        <input
-          type="number"
-          step={soru.tam_sayi ? 1 : "any"}
-          min={soru.min_deger ?? undefined}
-          max={soru.max_deger ?? undefined}
-          placeholder={soru.placeholder ?? ""}
-          value={text}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : null}
-
-      {soru.tip === "tc_kimlik" ? (
-        <input
-          inputMode="numeric"
-          maxLength={11}
-          placeholder={soru.placeholder ?? ""}
-          value={text}
-          onChange={(e) => onChange(digitsOnly(e.target.value, 11))}
-        />
-      ) : null}
-
-      {soru.tip === "cep_telefonu" ? (
-        <input
-          inputMode="tel"
-          placeholder={soru.placeholder ?? "05xx xxx xx xx"}
-          value={text}
-          onChange={(e) => onChange(formatCepTelefonu(e.target.value))}
-        />
-      ) : null}
-
-      {soru.tip === "tarih" ? (
-        <input type="date" value={text} onChange={(e) => onChange(e.target.value)} />
-      ) : null}
-
-      {soru.tip === "liste" ? (
-        <select value={text} onChange={(e) => onChange(e.target.value)}>
-          <option value="">Seçiniz</option>
-          {soru.secenekler.map((opt) => (
-            <option key={opt.id} value={String(opt.id)}>
-              {opt.etiket}
-            </option>
-          ))}
-        </select>
-      ) : null}
-
-      {soru.tip === "radio" ? (
-        <div className="kres-options">
-          {soru.secenekler.map((opt) => (
-            <label key={opt.id} className="kres-options__item">
-              <input
-                type="radio"
-                name={`soru-${soru.id}`}
-                checked={text === String(opt.id)}
-                onChange={() => onChange(String(opt.id))}
-              />
-              <span className="kres-options__label">{opt.etiket}</span>
-            </label>
-          ))}
-        </div>
-      ) : null}
-
-      {soru.tip === "checkbox" ? (
-        <div className="kres-options">
-          {soru.secenekler.map((opt) => (
-            <label key={opt.id} className="kres-options__item">
-              <input
-                type="checkbox"
-                checked={selected.includes(opt.id)}
-                onChange={() => onToggle(opt.id)}
-              />
-              <span className="kres-options__label">{opt.etiket}</span>
-            </label>
-          ))}
-        </div>
-      ) : null}
-
-      {soru.tip === "dosya" || soru.tip === "resim" ? (
-        <input
-          type="file"
-          accept={soru.tip === "resim" ? "image/jpeg,image/png,image/webp,image/gif" : undefined}
-          onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-        />
-      ) : null}
-
-      {file ? <small>{file.name}</small> : null}
-      {uyari ? <small className="field-error">{uyari}</small> : null}
-      {fieldError ? <small className="field-error">{fieldError}</small> : null}
     </div>
   );
 }

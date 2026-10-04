@@ -98,12 +98,11 @@ export function useBasvuruDogrulama() {
 
   const calistir = useCallback(
     async <T,>(fn: (ek: BasvuruDogrulamaEk | null) => Promise<T>): Promise<T | null> => {
-      if (!gerekli) {
-        try {
-          return await fn(null);
-        } catch (err) {
-          if (!kodHatasi(err)) throw err;
-        }
+      // Kod istenmeden önce form sunucuda doğrulanır; yalnızca kod eksikse SMS gönderilir.
+      try {
+        return await fn(null);
+      } catch (err) {
+        if (!kodHatasi(err)) throw err;
       }
 
       return new Promise<T | null>((resolve, reject) => {
@@ -119,7 +118,7 @@ export function useBasvuruDogrulama() {
         if (!oturum) void kodIste();
       });
     },
-    [gerekli, oturum, kodIste],
+    [oturum, kodIste],
   );
 
   function vazgec() {

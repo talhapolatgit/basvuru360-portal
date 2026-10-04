@@ -3,6 +3,11 @@ import { createPortal } from "react-dom";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { DetailLayout } from "../components/DetailBackLink";
 import { useBasvuruDogrulama } from "../components/BasvuruDogrulama";
+import {
+  ilkSoruHatasinaKaydir,
+  SoruFormuAlanlari,
+  useSoruFormu,
+} from "../components/SoruFormu";
 import { ScrollSelect } from "../components/ScrollSelect";
 import { PageHeader } from "../components/PageHeader";
 import { useAuth } from "../auth/AuthContext";
@@ -130,6 +135,9 @@ export function ApplyForm({ kind }: { kind: Kind }) {
   const cocukAdina = basvuruIcin === "cocuk" && cocukBasvurusuIzinli;
   const evrakTipleri = item?.evrak_zorunlu ? item.evrak_tipleri : [];
   const basvuruOnaylari = item?.basvuru_onaylari ?? [];
+  const soruFormu = item?.soru_formu ?? null;
+  const ekSorular = useMemo(() => soruFormu?.sorular ?? [], [soruFormu]);
+  const soruKontrol = useSoruFormu(ekSorular);
 
   const missing = useMemo(
     () => ({
@@ -330,6 +338,15 @@ export function ApplyForm({ kind }: { kind: Kind }) {
     setFieldErrors({});
     setSuccess(null);
 
+    const soruHatalari = soruKontrol.dogrula();
+    if (Object.keys(soruHatalari).length > 0) {
+      setFieldErrors(soruHatalari);
+      setError("Ek bilgiler bölümündeki eksik veya hatalı alanları düzeltin.");
+      setSubmitting(false);
+      ilkSoruHatasinaKaydir();
+      return;
+    }
+
     try {
       const fd = new FormData();
       if (kind === "kurs") fd.append("kurs_id", String(item.id));
@@ -410,6 +427,8 @@ export function ApplyForm({ kind }: { kind: Kind }) {
         const file = files[tip.id];
         if (file) fd.append(`evrak[${tip.id}]`, file);
       }
+
+      soruKontrol.formDatayaEkle(fd);
 
       for (const onay of basvuruOnaylari) {
         if (onaylar[onay.kod]) {
@@ -1066,6 +1085,20 @@ export function ApplyForm({ kind }: { kind: Kind }) {
                     ) : null}
                   </label>
                 ))}
+              </fieldset>
+            ) : null}
+
+            {soruFormu && ekSorular.length > 0 ? (
+              <fieldset className="apply-fieldset">
+                <legend>{soruFormu.ad || "Ek bilgiler"}</legend>
+                {soruFormu.aciklama ? (
+                  <p className="soru-formu__desc">{soruFormu.aciklama}</p>
+                ) : null}
+                <SoruFormuAlanlari
+                  sorular={ekSorular}
+                  kontrol={soruKontrol}
+                  fieldErrors={fieldErrors}
+                />
               </fieldset>
             ) : null}
 

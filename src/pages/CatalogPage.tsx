@@ -78,7 +78,7 @@ export function CatalogPage({
   const params = useParams();
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { sayfalar } = usePortalPages();
+  const { sayfalar, paths } = usePortalPages();
   const sayfalarRef = useRef(sayfalar);
   sayfalarRef.current = sayfalar;
 
@@ -456,6 +456,13 @@ export function CatalogPage({
         <Navigate to={`/giris?next=${encodeURIComponent(next)}`} replace />
       );
     }
+  }
+
+  if (sayfa.tek_icerik) {
+    const { tip, id } = sayfa.tek_icerik;
+    return (
+      <Navigate to={tip === "kurs" ? paths.kurs(id) : paths.etkinlik(id)} replace />
+    );
   }
 
   const pageDescription = sayfa.aciklama?.trim() || undefined;
