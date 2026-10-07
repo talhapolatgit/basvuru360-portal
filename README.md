@@ -22,14 +22,14 @@ Portal is a static SPA served by nginx (Dockerfile). Deploy as a **separate** Co
 
 1. New Resource → GitHub → `talhapolatgit/basvuru360-portal`
 2. Build pack: **Dockerfile** (uses repo `Dockerfile`)
-3. Port: **80**
-4. Build-time environment / ARG:
+3. **Ports Exposes: `80`** (nginx listens here; wrong port → 502 Bad Gateway even if status is Running)
+4. Domains: `https://portal.yourdomain.com` — if still 502, try `https://portal.yourdomain.com:80` once, save, redeploy
+5. Build-time environment / ARG:
 
 | Variable | Example | Notes |
 |---|---|---|
 | `VITE_API_BASE_URL` | `https://admin.yourdomain.com/api/v1` | Required in production. Baked into the JS bundle at build time. |
 
-5. Domain: e.g. `portal.yourdomain.com`
 6. On **basvuru360-admin** (Laravel): allow this portal origin in CORS (`FRONTEND_URL` / `SANCTUM_STATEFUL_DOMAINS` / `CORS_ALLOWED_ORIGINS` as configured in admin).
 
 Rebuild the portal after changing `VITE_API_BASE_URL` (Vite embeds env at build time).
