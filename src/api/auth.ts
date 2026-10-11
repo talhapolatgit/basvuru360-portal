@@ -99,6 +99,7 @@ export type KisiYakinItem = {
   cinsiyet: "erkek" | "kadin" | null;
   yakinlik_derecesi: string | null;
   yakinlik_label: string | null;
+  yakin_kisi_id: number | null;
 };
 
 export async function fetchYakinlar(): Promise<KisiYakinItem[]> {

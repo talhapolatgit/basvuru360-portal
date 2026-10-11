@@ -10,6 +10,7 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Profile } from "./pages/Profile";
 import { MyApplications } from "./pages/MyApplications";
+import { MyDocuments } from "./pages/MyDocuments";
 import { Courses } from "./pages/Courses";
 import { CourseDetail } from "./pages/CourseDetail";
 import { Events } from "./pages/Events";
@@ -38,6 +39,8 @@ function AppRoutes() {
           ? paths.etkinliklerSlug
           : kod === "basvurularim"
             ? paths.basvurularim.slice(1)
+            : kod === "evraklarim"
+              ? paths.evraklarim.slice(1)
             : kod === "profil"
               ? paths.profil.slice(1)
               : paths.kres.slice(1);
@@ -97,6 +100,14 @@ function AppRoutes() {
           element={
             <RequireAuth>
               <MyApplications />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path={paths.evraklarim.slice(1)}
+          element={
+            <RequireAuth>
+              <MyDocuments />
             </RequireAuth>
           }
         />

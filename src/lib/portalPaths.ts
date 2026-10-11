@@ -4,6 +4,7 @@ export const DEFAULT_SLUG: Record<string, string> = {
   kurslar: "kurslar",
   etkinlikler: "etkinlikler",
   basvurularim: "basvurularim",
+  evraklarim: "evraklarim",
   profil: "profil",
   "kres-basvuru": "kres",
 };
@@ -12,6 +13,7 @@ export const LEGACY_SLUGS: Record<string, string[]> = {
   kurslar: ["kurslar"],
   etkinlikler: ["etkinlikler"],
   basvurularim: ["basvurularim"],
+  evraklarim: ["evraklarim"],
   profil: ["profil"],
   "kres-basvuru": ["kres-basvuru", "kres"],
 };
@@ -26,6 +28,7 @@ export type PortalPaths = {
   etkinlik: (id: number | string) => string;
   etkinlikBasvuru: (id: number | string) => string;
   basvurularim: string;
+  evraklarim: string;
   profil: string;
   kres: string;
 };
@@ -64,6 +67,7 @@ export function buildPortalPaths(sayfalar: PortalSayfa[]): PortalPaths {
     etkinlik: (id) => `/${etkinliklerSlug}/${id}`,
     etkinlikBasvuru: (id) => `/${etkinliklerSlug}/${id}/basvuru`,
     basvurularim: sayfaPath(sayfalar, "basvurularim"),
+    evraklarim: sayfaPath(sayfalar, "evraklarim"),
     profil: sayfaPath(sayfalar, "profil"),
     kres: sayfaPath(sayfalar, "kres-basvuru"),
   };

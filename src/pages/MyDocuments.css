@@ -1,0 +1,190 @@
+.evrak-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.evrak-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  border: 1px solid rgba(12, 33, 56, 0.08);
+  border-radius: 10px;
+}
+
+.evrak-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.evrak-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  min-width: 0;
+}
+
+.evrak-row__adina {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.1rem 0.48rem;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 107, 98, 0.18);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+
+.evrak-row__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evrak-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+  margin: 0.12rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.evrak-row__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.35rem;
+}
+
+.evrak-row__actions .basvuru-card__btn {
+  min-height: 1.85rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.evrak-row--skeleton {
+  min-height: 3.1rem;
+}
+
+.evrak-row--skeleton .sk-line {
+  display: block;
+  height: 0.7rem;
+  border-radius: 6px;
+  background: rgba(12, 33, 56, 0.08);
+}
+
+.evrak-row--skeleton .sk-line--title {
+  width: min(14rem, 55%);
+  margin-bottom: 0.4rem;
+}
+
+.evrak-row--skeleton .sk-line--meta {
+  width: min(18rem, 70%);
+}
+
+.modal--evrak .modal__head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.evrak-detail__id {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.modal--evrak .evrak-detail__sub,
+.modal--evrak .evrak-kullanim__facts {
+  margin: 0;
+}
+
+.evrak-detail__sub {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.evrak-kullanim {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.evrak-kullanim__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(12, 33, 56, 0.03);
+  border: 1px solid rgba(12, 33, 56, 0.06);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.evrak-kullanim__head,
+.evrak-kullanim__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.7rem;
+  margin: 0;
+}
+
+.evrak-kullanim__tip {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+
+.evrak-kullanim__title {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.evrak-kullanim__meta {
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .evrak-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .evrak-row__title {
+    white-space: normal;
+  }
+
+  .evrak-row__actions {
+    width: 100%;
+  }
+}
