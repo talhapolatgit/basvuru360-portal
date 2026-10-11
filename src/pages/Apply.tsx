@@ -14,6 +14,11 @@ import { useAuth } from "../auth/AuthContext";
 import { useSettings } from "../auth/SettingsContext";
 import { usePortalPages } from "../auth/PortalPagesContext";
 import { fetchYakinlar, type KisiYakinItem } from "../api/auth";
+import {
+  fetchEvrakDosya,
+  fetchSecilebilirEvraklar,
+  type SecilebilirEvrak,
+} from "../api/evraklar";
 import { createEtkinlikBasvuru, createKursBasvuru } from "../api/basvurular";
 import {
   fetchEtkinlik,
@@ -24,6 +29,7 @@ import {
 import { ApiError } from "../api/client";
 import {
   dogumToIso,
+  formatDate,
   formatDogumInput,
   isoToDogumDisplay,
   mapEtkinlik,
@@ -108,6 +114,16 @@ export function ApplyForm({ kind }: { kind: Kind }) {
     null,
   );
   const [files, setFiles] = useState<Record<number, File | null>>({});
+  const [kayitliEvraklar, setKayitliEvraklar] = useState<SecilebilirEvrak[]>([]);
+  const [kayitliEvrakYukleniyor, setKayitliEvrakYukleniyor] = useState(false);
+  const [secilenEvrak, setSecilenEvrak] = useState<
+    Record<number, number | "yeni">
+  >({});
+  const [onizlenenEvrakId, setOnizlenenEvrakId] = useState<number | null>(null);
+  const [onizlemeHatasi, setOnizlemeHatasi] = useState<{
+    id: number;
+    mesaj: string;
+  } | null>(null);
   const [onaylar, setOnaylar] = useState<Record<string, boolean>>({});
   const [aktifMetin, setAktifMetin] = useState<BasvuruOnay | null>(null);
   const [iller, setIller] = useState<LookupItem[]>([]);
@@ -134,6 +150,14 @@ export function ApplyForm({ kind }: { kind: Kind }) {
     yakinIcinBasvuruAktif && (yas === null || yas >= 18);
   const cocukAdina = basvuruIcin === "cocuk" && cocukBasvurusuIzinli;
   const evrakTipleri = item?.evrak_zorunlu ? item.evrak_tipleri : [];
+  const hedefKisiId = useMemo(() => {
+    if (!cocukAdina) return kisi?.id ?? null;
+    if (typeof selectedYakinId !== "number") return null;
+    return (
+      yakinlar.find((yakin) => yakin.id === selectedYakinId)?.yakin_kisi_id ??
+      null
+    );
+  }, [cocukAdina, kisi?.id, selectedYakinId, yakinlar]);
   const basvuruOnaylari = item?.basvuru_onaylari ?? [];
   const soruFormu = item?.soru_formu ?? null;
   const ekSorular = useMemo(() => soruFormu?.sorular ?? [], [soruFormu]);
@@ -217,6 +241,60 @@ export function ApplyForm({ kind }: { kind: Kind }) {
       cancelled = true;
     };
   }, [basvuruIcin, manuelYakinEklemeAktif]);
+
+  const evrakTipAnahtar = evrakTipleri.map((tip) => tip.id).join(",");
+
+  useEffect(() => {
+    if (!hedefKisiId || evrakTipAnahtar === "") {
+      setKayitliEvraklar([]);
+      setSecilenEvrak({});
+      return;
+    }
+
+    let cancelled = false;
+    setKayitliEvrakYukleniyor(true);
+    setSecilenEvrak({});
+    setFiles({});
+    fetchSecilebilirEvraklar(hedefKisiId)
+      .then((items) => {
+        if (!cancelled) setKayitliEvraklar(items);
+      })
+      .catch(() => {
+        if (!cancelled) setKayitliEvraklar([]);
+      })
+      .finally(() => {
+        if (!cancelled) setKayitliEvrakYukleniyor(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hedefKisiId, evrakTipAnahtar]);
+
+  async function onizleKayitliEvrak(evrak: SecilebilirEvrak) {
+    if (onizlenenEvrakId != null) return;
+    const tab = window.open("about:blank", "_blank");
+    setOnizlenenEvrakId(evrak.id);
+    setOnizlemeHatasi(null);
+    try {
+      const blob = await fetchEvrakDosya(evrak.id);
+      const url = URL.createObjectURL(blob);
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      tab?.close();
+      setOnizlemeHatasi({
+        id: evrak.id,
+        mesaj: err instanceof ApiError ? err.message : "Evrak önizlenemedi.",
+      });
+    } finally {
+      setOnizlenenEvrakId(null);
+    }
+  }
 
   function selectKayitliYakin(yakin: KisiYakinItem) {
     setSelectedYakinId(yakin.id);
@@ -423,9 +501,32 @@ export function ApplyForm({ kind }: { kind: Kind }) {
         if (form.veli_email) fd.append("veli_email", form.veli_email);
       }
 
+      const evrakHatalari: Record<string, string[]> = {};
       for (const tip of evrakTipleri) {
+        const adaylar = kayitliEvraklar.filter(
+          (evrak) => evrak.evrak_tipi_id === tip.id,
+        );
+        const secim = secilenEvrak[tip.id];
         const file = files[tip.id];
-        if (file) fd.append(`evrak[${tip.id}]`, file);
+        if (adaylar.length > 0 && typeof secim === "number") {
+          fd.append(`kayitli_evrak[${tip.id}]`, String(secim));
+          continue;
+        }
+        if (file && (adaylar.length === 0 || secim === "yeni")) {
+          fd.append(`evrak[${tip.id}]`, file);
+          continue;
+        }
+        evrakHatalari[`evrak.${tip.id}`] = [
+          adaylar.length > 0
+            ? "Kayıtlı bir evrak seçin veya yeni dosya yükleyin."
+            : "Zorunlu evrak yüklenmelidir.",
+        ];
+      }
+      if (Object.keys(evrakHatalari).length > 0) {
+        setFieldErrors(evrakHatalari);
+        setError("Gerekli evrakları seçin veya yükleyin.");
+        setSubmitting(false);
+        return;
       }
 
       soruKontrol.formDatayaEkle(fd);
@@ -1059,32 +1160,147 @@ export function ApplyForm({ kind }: { kind: Kind }) {
             {evrakTipleri.length > 0 ? (
               <fieldset className="apply-fieldset">
                 <legend>Gerekli evraklar</legend>
-                {evrakTipleri.map((tip) => (
-                  <label key={tip.id} className="field">
-                    <span>
-                      {tip.ad} *
-                      {tip.aciklama ? (
-                        <em style={{ fontWeight: 400 }}> — {tip.aciklama}</em>
+                {kayitliEvrakYukleniyor ? (
+                  <p className="apply-note">Kayıtlı evraklar kontrol ediliyor…</p>
+                ) : null}
+                {evrakTipleri.map((tip) => {
+                  const adaylar = kayitliEvraklar.filter(
+                    (evrak) => evrak.evrak_tipi_id === tip.id,
+                  );
+                  const secim = secilenEvrak[tip.id];
+                  const yeniDosya = adaylar.length === 0 || secim === "yeni";
+                  const secilenDosya = files[tip.id];
+                  return (
+                    <div key={tip.id} className="evrak-blok">
+                      <div className="evrak-blok__head">
+                        <h3>
+                          {tip.ad} <abbr title="zorunlu">*</abbr>
+                        </h3>
+                        {tip.aciklama ? <p>{tip.aciklama}</p> : null}
+                      </div>
+                      {adaylar.length > 0 ? (
+                        <div
+                          className="evrak-secim"
+                          role="radiogroup"
+                          aria-label={`${tip.ad} seçimi`}
+                        >
+                          <p className="evrak-secim__kicker">
+                            Kayıtlı evraklardan seçin
+                          </p>
+                          {adaylar.map((evrak) => (
+                            <div key={evrak.id} className="evrak-secim__kayit">
+                              <div
+                                className={`evrak-secim__option${
+                                  secim === evrak.id ? " is-selected" : ""
+                                }`}
+                              >
+                                <label className="evrak-secim__choice">
+                                  <input
+                                    className="evrak-secim__input"
+                                    type="radio"
+                                    name={`evrak-secim-${tip.id}`}
+                                    checked={secim === evrak.id}
+                                    onChange={() => {
+                                      setSecilenEvrak((prev) => ({
+                                        ...prev,
+                                        [tip.id]: evrak.id,
+                                      }));
+                                      setFiles((prev) => ({
+                                        ...prev,
+                                        [tip.id]: null,
+                                      }));
+                                    }}
+                                  />
+                                  <span className="evrak-secim__mark" aria-hidden="true" />
+                                  <span className="evrak-secim__body">
+                                    <span className="evrak-secim__topline">
+                                      <span className="evrak-secim__title">
+                                        {evrak.evrak_tipi} #{evrak.id}
+                                      </span>
+                                    </span>
+                                    <span className="evrak-secim__meta">
+                                      <span>
+                                        Son geçerlilik {evrak.son_gecerlilik_metin}
+                                      </span>
+                                      <span>
+                                        Yüklenme {formatDate(evrak.yuklenme_tarihi)}
+                                      </span>
+                                    </span>
+                                  </span>
+                                </label>
+                                <button
+                                  type="button"
+                                  className="evrak-secim__onizle"
+                                  disabled={onizlenenEvrakId != null}
+                                  onClick={() => void onizleKayitliEvrak(evrak)}
+                                >
+                                  {onizlenenEvrakId === evrak.id ? "Açılıyor…" : "Önizle"}
+                                </button>
+                              </div>
+                              {onizlemeHatasi?.id === evrak.id ? (
+                                <small className="field-error">{onizlemeHatasi.mesaj}</small>
+                              ) : null}
+                            </div>
+                          ))}
+                          <label
+                            className={`evrak-secim__option evrak-secim__option--upload${
+                              secim === "yeni" ? " is-selected" : ""
+                            }`}
+                          >
+                            <input
+                              className="evrak-secim__input"
+                              type="radio"
+                              name={`evrak-secim-${tip.id}`}
+                              checked={secim === "yeni"}
+                              onChange={() =>
+                                setSecilenEvrak((prev) => ({
+                                  ...prev,
+                                  [tip.id]: "yeni",
+                                }))
+                              }
+                            />
+                            <span className="evrak-secim__mark" aria-hidden="true" />
+                            <span className="evrak-secim__body">
+                              <span className="evrak-secim__title">
+                                Yeni dosya yükle
+                              </span>
+                              <span className="evrak-secim__meta">
+                                PDF, JPG veya PNG · en fazla 5 MB
+                              </span>
+                            </span>
+                          </label>
+                        </div>
                       ) : null}
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
-                      required
-                      onChange={(e) =>
-                        setFiles((f) => ({
-                          ...f,
-                          [tip.id]: e.target.files?.[0] ?? null,
-                        }))
-                      }
-                    />
-                    {fieldErrors[`evrak.${tip.id}`]?.[0] ? (
-                      <small className="field-error">
-                        {fieldErrors[`evrak.${tip.id}`][0]}
-                      </small>
-                    ) : null}
-                  </label>
-                ))}
+                      {yeniDosya ? (
+                        <label className="evrak-yukle">
+                          <input
+                            className="evrak-yukle__input"
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
+                            required={adaylar.length === 0}
+                            onChange={(e) =>
+                              setFiles((f) => ({
+                                ...f,
+                                [tip.id]: e.target.files?.[0] ?? null,
+                              }))
+                            }
+                          />
+                          <span className="evrak-yukle__name">
+                            {secilenDosya
+                              ? secilenDosya.name
+                              : "Dosya seçin"}
+                          </span>
+                          <span className="evrak-yukle__btn">Gözat</span>
+                        </label>
+                      ) : null}
+                      {fieldErrors[`evrak.${tip.id}`]?.[0] ? (
+                        <small className="field-error">
+                          {fieldErrors[`evrak.${tip.id}`][0]}
+                        </small>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </fieldset>
             ) : null}
 

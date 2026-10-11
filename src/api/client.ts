@@ -310,3 +310,50 @@ export async function apiDownload(
   a.remove();
   URL.revokeObjectURL(objectUrl);
 }
+
+/** Kimlik doğrulamalı dosyayı yeni sekmede açmak için ikili içerik döndürür. */
+export async function apiBlob(
+  path: string,
+  options: { auth?: boolean; skipRefresh?: boolean } = {},
+): Promise<Blob> {
+  const { auth = true, skipRefresh = false } = options;
+  const url = new URL(`${baseUrl()}${path.startsWith("/") ? path : `/${path}`}`);
+  const headers: Record<string, string> = {
+    Accept: "application/pdf,image/*,application/octet-stream,*/*",
+  };
+
+  if (auth) {
+    const token = getAccessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url.toString(), { method: "GET", headers });
+
+  if (res.status === 401 && auth && !skipRefresh) {
+    if (!refreshPromise) {
+      refreshPromise = tryRefresh().finally(() => {
+        refreshPromise = null;
+      });
+    }
+    const ok = await refreshPromise;
+    if (ok) {
+      return apiBlob(path, { ...options, skipRefresh: true });
+    }
+  }
+
+  const contentType = res.headers.get("Content-Type") ?? "";
+  if (!res.ok) {
+    let message = "Dosya açılamadı.";
+    if (contentType.includes("application/json")) {
+      try {
+        const json = (await res.json()) as ApiEnvelope<unknown>;
+        if (json.message) message = json.message;
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new ApiError(message, res.status);
+  }
+
+  return res.blob();
+}

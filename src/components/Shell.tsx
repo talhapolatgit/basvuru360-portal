@@ -145,6 +145,31 @@ function IconPage() {
   );
 }
 
+function IconDocuments() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 3.75h7.2L19 8.6V20.25a1.25 1.25 0 0 1-1.25 1.25H7A1.25 1.25 0 0 1 5.75 20.25V5A1.25 1.25 0 0 1 7 3.75Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 3.9V8.4h4.4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.6 12.2h6.8M8.6 15.6h4.6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function pageIcon(sayfa: PortalSayfa) {
   const customIcon = resolvePortalAssetUrl(sayfa.sidebar_ikon_url);
   if (customIcon) {
@@ -159,6 +184,7 @@ function pageIcon(sayfa: PortalSayfa) {
   if (sayfa.kod === "kurslar") return <IconCourses />;
   if (sayfa.kod === "etkinlikler") return <IconEvents />;
   if (sayfa.kod === "basvurularim") return <IconApplications />;
+  if (sayfa.kod === "evraklarim") return <IconDocuments />;
   if (sayfa.kod === "kres-basvuru") return <IconKres />;
   if (sayfa.kod === "profil") return <IconUser />;
   return <IconPage />;
@@ -188,6 +214,7 @@ export function Shell() {
           }
           if (
             s.kod === "basvurularim" ||
+            s.kod === "evraklarim" ||
             s.kod === "profil" ||
             s.kod === "kres-basvuru"
           ) {
