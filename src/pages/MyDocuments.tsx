@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { PageHeader } from "../components/PageHeader";
+import { useAuth } from "../auth/AuthContext";
+import { fetchYakinlar, type KisiYakinItem } from "../api/auth";
 import {
   fetchEvrakDetay,
   fetchEvrakDosya,
   fetchEvraklarim,
+  fetchEvrakTipleri,
+  uploadEvrak,
   type EvrakDetay,
   type EvrakItem,
+  type EvrakTipiSecenegi,
 } from "../api/evraklar";
 import { ApiError } from "../api/client";
 import { usePortalSayfaMeta } from "../hooks/usePortalSayfaMeta";
@@ -30,6 +35,7 @@ function durumBadgeClass(kod: string | null | undefined): string {
 }
 
 export function MyDocuments() {
+  const { kisi } = useAuth();
   const sayfaMeta = usePortalSayfaMeta("evraklarim", {
     baslik: "Evraklarım",
     aciklama: "Sisteme yüklediğiniz evrakları görüntüleyin.",
@@ -39,6 +45,17 @@ export function MyDocuments() {
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<number | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadSubmitting, setUploadSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadFieldErrors, setUploadFieldErrors] = useState<Record<string, string[]>>({});
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [evrakTipleri, setEvrakTipleri] = useState<EvrakTipiSecenegi[]>([]);
+  const [yakinlar, setYakinlar] = useState<KisiYakinItem[]>([]);
+  const [sahip, setSahip] = useState<"kendisi" | number>("kendisi");
+  const [evrakTipiId, setEvrakTipiId] = useState("");
+  const [dosya, setDosya] = useState<File | null>(null);
 
   const [detail, setDetail] = useState<EvrakDetay | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -69,13 +86,89 @@ export function MyDocuments() {
   }, []);
 
   useEffect(() => {
-    if (!detail && !detailLoading && !detailError) return;
+    if (!uploadOpen) return;
+    let cancelled = false;
+    setUploadLoading(true);
+    setUploadError(null);
+    setUploadFieldErrors({});
+    void Promise.all([fetchEvrakTipleri(), fetchYakinlar()])
+      .then(([tipler, kayitliYakinlar]) => {
+        if (cancelled) return;
+        setEvrakTipleri(tipler);
+        setYakinlar(kayitliYakinlar);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setUploadError(err instanceof ApiError ? err.message : "Yükleme formu açılamadı.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setUploadLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [uploadOpen]);
+
+  useEffect(() => {
+    if (!detail && !detailLoading && !detailError && !uploadOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [detail, detailLoading, detailError]);
+  }, [detail, detailLoading, detailError, uploadOpen]);
+
+  function openUpload() {
+    setSahip("kendisi");
+    setEvrakTipiId("");
+    setDosya(null);
+    setUploadError(null);
+    setUploadFieldErrors({});
+    setUploadNotice(null);
+    setUploadOpen(true);
+  }
+
+  function closeUpload() {
+    if (uploadSubmitting) return;
+    setUploadOpen(false);
+  }
+
+  async function onUpload(event: FormEvent) {
+    event.preventDefault();
+    if (uploadSubmitting) return;
+    setUploadError(null);
+    setUploadFieldErrors({});
+    if (!evrakTipiId) {
+      setUploadFieldErrors({ evrak_tipi_id: ["Evrak tipi seçin."] });
+      return;
+    }
+    if (!dosya) {
+      setUploadFieldErrors({ dosya: ["Dosya seçin."] });
+      return;
+    }
+    const form = new FormData();
+    form.append("evrak_tipi_id", evrakTipiId);
+    form.append("dosya", dosya);
+    if (sahip !== "kendisi") form.append("yakin_id", String(sahip));
+    setUploadSubmitting(true);
+    try {
+      await uploadEvrak(form);
+      const list = await fetchEvraklarim();
+      setItems(list);
+      setUploadNotice("Evrak yüklendi. Onay bekliyor.");
+      setUploadOpen(false);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setUploadError(err.message);
+        setUploadFieldErrors(err.errors ?? {});
+      } else {
+        setUploadError("Evrak yüklenemedi.");
+      }
+    } finally {
+      setUploadSubmitting(false);
+    }
+  }
 
   function closeDetail() {
     setDetail(null);
@@ -197,12 +290,133 @@ export function MyDocuments() {
         )
       : null;
 
+  const uploadModal =
+    uploadOpen && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeUpload();
+            }}
+          >
+            <div
+              className="modal modal--detail modal--evrak"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="evrak-upload-title"
+            >
+              <div className="modal__head">
+                <h2 id="evrak-upload-title">Yeni evrak yükle</h2>
+                <button
+                  type="button"
+                  className="modal__close"
+                  aria-label="Kapat"
+                  onClick={closeUpload}
+                >
+                  ×
+                </button>
+              </div>
+              <form className="modal__body evrak-form" onSubmit={(e) => void onUpload(e)}>
+                {uploadLoading ? <p className="apply-note">Form hazırlanıyor…</p> : null}
+                {uploadError ? <p className="form-error">{uploadError}</p> : null}
+                <label className="field">
+                  <span>Kimin adına</span>
+                  <select
+                    value={sahip === "kendisi" ? "kendisi" : String(sahip)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSahip(value === "kendisi" ? "kendisi" : Number(value));
+                    }}
+                    disabled={uploadSubmitting}
+                  >
+                    <option value="kendisi">
+                      Kendim{kisi?.tam_adi ? ` (${kisi.tam_adi})` : ""}
+                    </option>
+                    {yakinlar.map((yakin) => (
+                      <option key={yakin.id} value={yakin.id}>
+                        {(yakin.yakinlik_label || "Yakın") + " · " + (yakin.tam_adi || "İsimsiz")}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!uploadLoading && !uploadError && yakinlar.length === 0 ? (
+                  <p className="apply-note">Kayıtlı eş veya çocuk bulunmuyor. Evrak kendi adınıza yüklenir.</p>
+                ) : null}
+                {uploadFieldErrors.yakin_id?.[0] ? (
+                  <small className="field-error">{uploadFieldErrors.yakin_id[0]}</small>
+                ) : null}
+                <label className="field">
+                  <span>Evrak tipi</span>
+                  <select
+                    value={evrakTipiId}
+                    onChange={(e) => setEvrakTipiId(e.target.value)}
+                    disabled={uploadSubmitting || uploadLoading}
+                    required
+                  >
+                    <option value="">Seçin</option>
+                    {evrakTipleri.map((tip) => (
+                      <option key={tip.id} value={tip.id}>
+                        {tip.ad}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {evrakTipleri.find((tip) => String(tip.id) === evrakTipiId)?.aciklama ? (
+                  <p className="apply-note">
+                    {evrakTipleri.find((tip) => String(tip.id) === evrakTipiId)?.aciklama}
+                  </p>
+                ) : null}
+                {uploadFieldErrors.evrak_tipi_id?.[0] ? (
+                  <small className="field-error">{uploadFieldErrors.evrak_tipi_id[0]}</small>
+                ) : null}
+                <label className="evrak-yukle">
+                  <input
+                    className="evrak-yukle__input"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
+                    disabled={uploadSubmitting}
+                    onChange={(e) => setDosya(e.target.files?.[0] ?? null)}
+                  />
+                  <span className="evrak-yukle__name">
+                    {dosya ? dosya.name : "Dosya seçin"}
+                  </span>
+                  <span className="evrak-yukle__btn">Gözat</span>
+                </label>
+                <p className="apply-note">PDF, JPG veya PNG · en fazla 5 MB</p>
+                {uploadFieldErrors.dosya?.[0] ? (
+                  <small className="field-error">{uploadFieldErrors.dosya[0]}</small>
+                ) : null}
+                <div className="evrak-form__actions">
+                  <button type="button" className="btn btn--ghost" onClick={closeUpload} disabled={uploadSubmitting}>
+                    Vazgeç
+                  </button>
+                  <button type="submit" className="btn btn--accent" disabled={uploadSubmitting || uploadLoading}>
+                    {uploadSubmitting ? "Yükleniyor…" : "Yükle"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="page page-enter">
-      <PageHeader title={sayfaMeta.baslik} description={sayfaMeta.aciklama} />
+      <PageHeader
+        title={sayfaMeta.baslik}
+        description={sayfaMeta.aciklama}
+        actions={
+          <button type="button" className="btn btn--accent" onClick={openUpload}>
+            Yeni evrak yükle
+          </button>
+        }
+      />
 
       {error ? <p className="form-error">{error}</p> : null}
       {fileError ? <p className="form-error">{fileError}</p> : null}
+      {uploadNotice ? <p className="form-success">{uploadNotice}</p> : null}
 
       {loading ? (
         <div aria-busy="true" aria-live="polite">
@@ -262,6 +476,7 @@ export function MyDocuments() {
       ) : null}
 
       {detailModal}
+      {uploadModal}
     </div>
   );
 }

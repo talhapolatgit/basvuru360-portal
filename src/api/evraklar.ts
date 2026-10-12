@@ -43,6 +43,27 @@ export async function fetchEvraklarim() {
   return data.items;
 }
 
+export type EvrakTipiSecenegi = {
+  id: number;
+  ad: string;
+  aciklama: string | null;
+};
+
+export async function fetchEvrakTipleri() {
+  const data = await apiRequest<{ items: EvrakTipiSecenegi[] }>("/evraklarim/tipler", {
+    auth: true,
+  });
+  return data.items;
+}
+
+export async function uploadEvrak(form: FormData) {
+  return apiRequest<EvrakItem>("/evraklarim", {
+    method: "POST",
+    auth: true,
+    formData: form,
+  });
+}
+
 export async function fetchEvrakDetay(id: number) {
   return apiRequest<EvrakDetay>(`/evraklarim/${id}`, { auth: true });
 }
